@@ -136,7 +136,7 @@ void setup() {
 }
 
 void loop() {
-    #if BRINGUP_DIGITAL_INPUT
+  #if BRINGUP_DIGITAL_INPUT
   bringup_digital_input();
   #endif
   #if BRINGUP_DIGITAL_OUTPUT
