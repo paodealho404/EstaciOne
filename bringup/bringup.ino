@@ -1,85 +1,158 @@
-/* Definições Úteis */
-#define LONGEST_PATH 3
-#define ROWS 2
-#define SLOTS 4
-#define PATH_A(x) PARKING_LOT[0][x].path
-#define PATH_B(x) PARKING_LOT[1][x].path
-#define DIST_A(x) PARKING_LOT[0][x].distance
-#define DIST_B(x) PARKING_LOT[1][x].distance
-#define BUSY_A(x) PARKING_LOT[0][x].busy
-#define BUSY_B(x) PARKING_LOT[1][x].busy
-#define STR_A(x,y) strcpy(PARKING_LOT[0][x].str,y) 
-#define STR_B(x,y) strcpy(PARKING_LOT[1][x].str,y)
-/**********************/
-
-/* Configuração de Mapa */
-#define DEFINE_MAP_A0 STR_A(0, "A0"); DIST_A(0) = 255; BUSY_A(0) = FREE_STATE; PATH_A(0).color_list[0] = BLACK; PATH_A(0).color_list[1] = BLACK; PATH_A(0).color_list[2] = BLACK
-#define DEFINE_MAP_A1 STR_A(1, "A1"); DIST_A(1) = 255; BUSY_A(1) = FREE_STATE; PATH_A(1).color_list[0] = BLACK; PATH_A(1).color_list[1] = BLACK; PATH_A(1).color_list[2] = BLACK
-#define DEFINE_MAP_A2 STR_A(2, "A2"); DIST_A(2) = 255; BUSY_A(2) = FREE_STATE; PATH_A(2).color_list[0] = BLACK; PATH_A(2).color_list[1] = BLACK; PATH_A(2).color_list[2] = BLACK
-#define DEFINE_MAP_A3 STR_A(3, "A3"); DIST_A(3) = 255; BUSY_A(3) = FREE_STATE; PATH_A(3).color_list[0] = BLACK; PATH_A(3).color_list[1] = BLACK; PATH_A(3).color_list[2] = BLACK
-#define DEFINE_MAP_B0 STR_B(0, "B0"); DIST_B(0) = 255; BUSY_B(0) = FREE_STATE; PATH_B(0).color_list[0] = BLACK; PATH_B(0).color_list[1] = BLACK; PATH_B(0).color_list[2] = BLACK
-#define DEFINE_MAP_B1 STR_B(1, "B1"); DIST_B(1) = 255; BUSY_B(1) = FREE_STATE; PATH_B(1).color_list[0] = BLACK; PATH_B(1).color_list[1] = BLACK; PATH_B(1).color_list[2] = BLACK
-#define DEFINE_MAP_B2 STR_B(2, "B2"); DIST_B(2) = 255; BUSY_B(2) = FREE_STATE; PATH_B(2).color_list[0] = BLACK; PATH_B(2).color_list[1] = BLACK; PATH_B(2).color_list[2] = BLACK
-#define DEFINE_MAP_B3 STR_B(3, "B3"); DIST_B(3) = 255; BUSY_B(3) = FREE_STATE; PATH_B(3).color_list[0] = BLACK; PATH_B(3).color_list[1] = BLACK; PATH_B(3).color_list[2] = BLACK
-/**********************/
-
-typedef enum {
-  BLACK = 0,
-  RED,
-  BLUE,
-  __COLOR_AMOUNT
-} COLOR;
-
-typedef enum {
-  FREE_STATE = 0,
-  RESERVED_STATE,
-  OCCUPIED_STATE,
-  __STATE_AMOUNT
-} SLOT_STATE;
-
-typedef struct{
-  COLOR color_list[LONGEST_PATH];
-} PATH_MAP;
+/**
+ * @file bringup.ino
+ * @author Pedro (phbn@ic.ifal.br)
+ * @brief Implementação para testes dos periféricos do Arduíno
+ * @version 0.1
+ * @date 2022-08-30
+ * 
+ * @copyright Copyright (c) 2022
+ * 
+ */
 
 
-typedef struct {
-    char str[3];
-    uint8_t distance;
-    PATH_MAP path;
-    SLOT_STATE busy; //TODO: Mudar de boolean para slot state
-} AREA;
+/**
+ * @brief Se estiver setado para 1, o teste de bancada a se fazer é o de entrada digital.
+ * 
+ */
+#define BRINGUP_DIGITAL_INPUT 0
+/**
+ * @brief Se estiver setado para 1, o teste de bancada a se fazer é o de saída digital.
+ * 
+ */
+#define BRINGUP_DIGITAL_OUTPUT 0
+/**
+ * @brief Se estiver setado para 1, o teste de bancada a se fazer é o de entrada analógica.
+ * 
+ */
+#define BRINGUP_ANALOG_INPUT 0
+/**
+ * @brief Se estiver setado para 1, o teste de bancada a se fazer é o de saída analógica.
+ * 
+ */
+#define BRINGUP_ANALOG_OUTPUT 0
+/**
+ * @brief Se estiver setado para 1, o teste de bancada a se fazer é o de PWM.
+ * 
+ */
+#define BRINGUP_PWM 0
+/**
+ * @brief Se estiver setado para 1, o teste de bancada a se fazer é o de comunicação serial.
+ * 
+ */
+#define BRINGUP_SERIAL 0
 
-void sort_parking_lot(AREA PARKING_LOT[ROWS][SLOTS]);
+/**
+ * @brief Teste de bancada de entrada digital
+ * 
+ */
+void bringup_digital_input();
+
+/**
+ * @brief Teste de bancada de saída digital
+ * 
+ */
+void bringup_digital_output();
+
+/**
+ * @brief Teste de bancada de entrada analógica
+ * 
+ */
+void bringup_analog_input();
+
+/**
+ * @brief Teste de bancada de saída analógica
+ * 
+ */
+void bringup_analog_output();
+
+/**
+ * @brief Teste de bancada de PWM.
+ * 
+ */
+void bringup_pwm();
+
+/**
+ * @brief Teste de bancada de 
+ * 
+ */
+void bringup_serial();
+
+/**
+ * @brief Configuração dos pinos digitais como entradas
+ * 
+ */
+void setup_digital_input();
+  
+/**
+ * @brief Configuração dos pinos digitais como saídas
+ * 
+ */  
+void setup_digital_output();
+  
+/**
+ * @brief Configuração dos pinos analógicos como entradas
+ * 
+ */  
+void setup_analog_input();
+  
+/**
+ * @brief Configuração dos pinos analógicos como saídas
+ * 
+ */  
+void setup_analog_output();
+  
+/**
+ * @brief Configuração dos pinos digitais como pwm
+ * 
+ */  
+void setup_pwm();
+  
+/**
+ * @brief Configuração dos pinos TX e RX para comunicação serial
+ * 
+ */  
+void setup_serial();
+  
 
 void setup() {
-  AREA PARKING_LOT[ROWS][SLOTS] = {};
-  DEFINE_MAP_A0;
-  DEFINE_MAP_A1;
-  DEFINE_MAP_A2;
-  DEFINE_MAP_A3;
-  DEFINE_MAP_B0;
-  DEFINE_MAP_B1;
-  DEFINE_MAP_B2;
-  DEFINE_MAP_B3;  
-  Serial.begin(9600);
-  
+  #if BRINGUP_DIGITAL_INPUT
+  setup_digital_input();
+  #endif
+  #if BRINGUP_DIGITAL_OUTPUT
+  setup_digital_output();
+  #endif
+  #if BRINGUP_ANALOG_INPUT
+  setup_analog_input();
+  #endif
+  #if BRINGUP_ANALOG_OUTPUT
+  setup_analog_output();
+  #endif
+  #if BRINGUP_PWM
+  setup_pwm();
+  #endif
+  #if BRINGUP_SERIAL
+  setup_serial();
+  #endif
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+    #if BRINGUP_DIGITAL_INPUT
+  bringup_digital_input();
+  #endif
+  #if BRINGUP_DIGITAL_OUTPUT
+  bringup_digital_output();
+  #endif
+  #if BRINGUP_ANALOG_INPUT
+  bringup_analog_input();
+  #endif
+  #if BRINGUP_ANALOG_OUTPUT
+  bringup_analog_output();
+  #endif
+  #if BRINGUP_PWM
+  bringup_pwm();
+  #endif
+  #if BRINGUP_TX_RX
+  bringup_serial();
+  #endif
 
-}
-
-void sort_parking_lot(AREA PARKING_LOT[ROWS][SLOTS]){
-  AREA sorted[ROWS*SLOTS];
-  memcpy(sorted, PARKING_LOT, ROWS*sizeof(PARKING_LOT));
-  
-  for(int i = 0; i<ROWS; i++){
-    for (int j = 0; j < SLOTS; j++)
-    {
-      Serial.print((String)sorted[(i*SLOTS)+j].distance+" ");
-    }
-    Serial.println("");
-  }
-  
 }
