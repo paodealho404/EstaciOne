@@ -83,3 +83,5 @@ void sort_parking_lot(AREA PARKING_LOT[ROWS][SLOTS]){
   }
   
 }
+
+/* As funções devem ser implementadas abaixo desta linha*/

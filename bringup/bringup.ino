@@ -156,3 +156,5 @@ void loop() {
   #endif
 
 }
+
+/* As funções devem ser implementadas abaixo desta linha*/
