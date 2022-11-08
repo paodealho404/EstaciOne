@@ -1,7 +1,7 @@
 setup:
 	.def temp = r16 ;Define o nome 'temp' para o registrador r16
 	ldi temp, 0b00000000 ;Carrega em temp 00000000
-	out DDRB, temp ;Configura PORTB4 e PORTB3 como saída. Usadas pelo Led e Buzzer
+	out DDRB, temp 
 
 	ldi temp, 0b1111100 ;Carrega em temp 11111100
 	out DDRD, temp ;Configura PORTD7 e PORTD6 como saída usadas pelo led e buzzer. 
@@ -43,6 +43,13 @@ setup:
 	.equ trocaAndar = 0b0111
 	.equ chegou = 0b1000
 
+	.equ terreo   = 0b0000
+	.equ primeiro = 0b0001
+	.equ segundo  = 0b0010
+	.equ terceiro = 0b0011
+
+	.equ botaoInterno = 0b0000
+	.equ botaoExterno = 0b0001
 
 	; PORTD
 	.equ led = PD7
@@ -73,8 +80,69 @@ setup:
 
 	.def state = r17 ;Define o nome 'state' para o registrador r17
 	ldi state, inicio ;Define o estado para 'inicio'
+	.def andarAtual = r18 ;Define o nome 'andarAtual' para o registrador r18
+	ldi andarAtual, terreo ;Define o andar atual para 0
+	.def andarDestino = r20 ;Define o nome 'andarDestino' para o registrador r20
+	.def andarPressionado = r21 ;Define o nome 'andarPressionado' para o registrador r21
+	.def localPressionado = r22 ;Define o nome 'localPressionado' para o registrador r22, 0 para interno e 1 para externo
 loop:
+
+	/*
+	sbic PINC, botao_interno_terreo ;Se o botão interno do térreo for pressionado
+	call faz_alguma coisa ; se o botão for apertado vem pra ca
+	ldi andarPressionado, terreo ;Define o andar pressionado para 0
+	ldi localPressionado, botaoInterno ;Define o local pressionado para 0 (Botão interno)
+
+	sbic PINC, botao_interno_andar1 ;Se o botão interno do primeiro andar for pressionado
+	call faz_alguma coisa ; se o botão for apertado vem pra ca
+	ldi andarPressionado, primeiro ;Define o andar pressionado para 1
+	ldi localPressionado, botaoInterno ;Define o local pressionado para 0 (Botão interno)
+
+	sbic PINC, botao_interno_andar2 ;Se o botão interno do segundo andar for pressionado
+	call faz_alguma coisa ; se o botão for apertado vem pra ca
+	ldi andarPressionado, segundo ;Define o andar pressionado para 2
+	ldi localPressionado, botaoInterno ;Define o local pressionado para 0 (Botão interno)
+
+	sbic PINC, botao_interno_andar3 ;Se o botão interno do terceiro andar for pressionado
+	call faz_alguma coisa ; se o botão for apertado vem pra ca
+	ldi andarPressionado, terceiro ;Define o andar pressionado para 3
+	ldi localPressionado, botaoInterno ;Define o local pressionado para 0 (Botão interno)
+
+	sbic PINB, botao_externo_terreo ;Se o botão externo do térreo for pressionado
+	call faz_alguma coisa ; se o botão for apertado vem pra ca
+	ldi andarPressionado, terreo ;Define o andar pressionado para 0
+	ldi localPressionado, botaoExterno ;Define o local pressionado para 1 (Botão externo)
+
+	sbic PINB, botao_externo_andar1 ;Se o botão externo do primeiro andar for pressionado
+	call faz_alguma coisa ; se o botão for apertado vem pra ca
+	ldi andarPressionado, primeiro ;Define o andar pressionado para 1
+	ldi localPressionado, botaoExterno ;Define o local pressionado para 1 (Botão externo)
+
+	sbic PINB, botao_externo_andar2 ;Se o botão externo do segundo andar for pressionado
+	call faz_alguma coisa ; se o botão for apertado vem pra ca
+	ldi andarPressionado, segundo ;Define o andar pressionado para 2
+	ldi localPressionado, botaoExterno ;Define o local pressionado para 1 (Botão externo)
+
+	sbic PINB, botao_externo_andar3 ;Se o botão externo do terceiro andar for pressionado
+	call faz_alguma coisa ; se o botão for apertado vem pra ca
+	ldi andarPressionado, terceiro ;Define o andar pressionado para 3
+	ldi localPressionado, botaoExterno ;Define o local pressionado para 1 (Botão externo)
+
+	sbic PINC, botao_abrir ;Se o botão de abrir for pressionado
+	rjmp faz_alguma_coisa ; se o botão for apertado vem pra ca
+	sbic PINC, botao_fechar ;Se o botão de fechar for pressionado
+	rjmp faz_alguma_coisa ; se o botão for apertado vem pra ca
+	
+	faz_alguma_coisa:
+		ldi state, atualizaFila ;Define o estado para 'atualizaFila'
+		reti
+	*/
+	reti ;Retorna
+	*/
+
+	*/
 	; switch(state)
+
 	cpi state, inicio
 	breq case_inicio
 
@@ -107,8 +175,6 @@ loop:
 	;cbi PORTB, PB4 ;Sim ,desliga LED ;cbi = clear bit in I/O register
 	rjmp loop ;Volta ao começo do loop
 
-
-
 case_inicio:
 	ldi state, parado
 	jmp loop
@@ -139,8 +205,8 @@ case_chegou:
 
 led_on:
 	ldi temp, display_dois
-	ldi r18, (1 << led)
-	or temp, r18
+	ldi r19, (1 << led)
+	or temp, r19
 	out PORTD, temp
 	;sbi PORTD, led ;Liga LED ;sbi set bit in I/O register
 	;sbi PORTD, buzzer ;Liga LED ;sbi set bit in I/O register
