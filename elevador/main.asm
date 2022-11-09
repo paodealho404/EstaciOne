@@ -3,7 +3,7 @@ setup:
 	ldi temp, 0b00000000 ;Carrega em temp 00000000
 	out DDRB, temp 
 
-	ldi temp, 0b1111100 ;Carrega em temp 11111100
+	ldi temp, 0b11111100 ;Carrega em temp 11111100
 	out DDRD, temp ;Configura PORTD7 e PORTD6 como saída usadas pelo led e buzzer. 
 	;Configura PORTD5, PORTD4, PORTD3 e PORTD2 como saída usadas pelo CI
 
@@ -11,8 +11,8 @@ setup:
 	out DDRC, temp ;Na porta C terá apenas botões
 
 
-	ldi temp, 0b00100111;Carrega 00100111 em temp
-	out PORTB, temp ;inicializa as portas PB4 (Buzzer) e PB3 (Led) em LOW, e habilita pull-up em PB5, PB2, PB1 e PB0
+	ldi temp, 0b00001111;Carrega 00001111 em temp
+	out PORTB, temp ;inicializa as portas PB4 (Buzzer) e PB3 (Led) em LOW, e habilita pull-up em PB3, PB2, PB1 e PB0
 
 	ldi temp, 0b00111111 ;Carrega 00111111 em temp
 	out PORTC, temp ;Habilita pull-up em PC5, PC4, PC3, PC2, PC1 e PC0
@@ -87,7 +87,9 @@ setup:
 	.def localPressionado = r22 ;Define o nome 'localPressionado' para o registrador r22, 0 para interno e 1 para externo
 
 	.equ ClockMHz = 16 ;16MHz
-	.equ Delay = 20 ;20ms
+	.equ DelayMs = 20 ;20ms
+
+	rjmp loop
 
 delay20ms:
 	ldi r31, byte3(ClockMHz * 1000 * DelayMs / 5)
@@ -103,90 +105,142 @@ delay20ms:
 
 loop:
 	sbic PINC, botao_interno_terreo ;Se o botão interno do térreo for pressionado
-	rjmp button_pressed_call
-	ldi andarPressionado, botao_interno_terreo ;Define o andar pressionado como 0
+	rjmp botao_interno_terreo_pressed ;Pula para a rotina botao_interno_terreo_pressed
 
 	sbic PINC, botao_interno_andar1 ;Se o botão interno do primeiro andar for pressionado
-	rjmp button_pressed_call
+	rjmp botao_interno_andar1_pressed ;Pula para a rotina botao_interno_andar1_pressed
 
 	sbic PINC, botao_interno_andar2 ;Se o botão interno do segundo andar for pressionado
-	rjmp button_pressed_call
+	rjmp botao_interno_andar2_pressed ;Pula para a rotina botao_interno_andar2_pressed
 
 	sbic PINC, botao_interno_andar3 ;Se o botão interno do terceiro andar for pressionado
-	rjmp button_pressed_call
+	rjmp botao_interno_andar3_pressed ;Pula para a rotina botao_interno_andar3_pressed
 
 	sbic PINB, botao_externo_terreo ;Se o botão externo do térreo for pressionado
-	rjmp button_pressed_call
+	rjmp botao_externo_terreo_pressed ;Pula para a rotina botao_externo_terreo_pressed
 
 	sbic PINB, botao_externo_andar1 ;Se o botão externo do primeiro andar for pressionado
-	rjmp button_pressed_call
+	rjmp botao_externo_andar1_pressed ;Pula para a rotina botao_externo_andar1_pressed
 
 	sbic PINB, botao_externo_andar2 ;Se o botão externo do segundo andar for pressionado
-	rjmp button_pressed_call
+	rjmp botao_externo_andar2_pressed ;Pula para a rotina botao_externo_andar2_pressed
 
 	sbic PINB, botao_externo_andar3 ;Se o botão externo do terceiro andar for pressionado
-	rjmp button_pressed_call
+	rjmp botao_externo_andar3_pressed ;Pula para a rotina botao_externo_andar3_pressed
 
-	sbic PINC, botao_abrir ;Se o botão de abrir for pressionado
-	rjmp button_pressed_open
+	;sbic PINC, botao_abrir ;Se o botão de abrir for pressionado
+	;rjmp button_pressed_open
 
-	sbic PINC, botao_fechar ;Se o botão de fechar for pressionado
-	rjmp button_pressed_close
+	;sbic PINC, botao_fechar ;Se o botão de fechar for pressionado
+	;rjmp button_pressed_close
 
+	rjmp maquina_estados
 
-	button_pressed_call:
+	botao_interno_terreo_pressed:
 		rcall delay20ms ;Aguarda 20ms
-		ldi state, atualizaFila
+		ldi andarPressionado, botao_interno_terreo ;Define o andar pressionado como 0
+		ldi localPressionado, botaoInterno ;Define o local pressionado como interno
+		ldi state, atualizaFila ; Define o estado para 'atualizaFila'
+		rjmp maquina_estados
 
-	button_pressed_open:
+	botao_interno_andar1_pressed:
 		rcall delay20ms ;Aguarda 20ms
-		ldi state, abrir
+		ldi andarPressionado, botao_interno_andar1 ;Define o andar pressionado como 1
+		ldi localPressionado, botaoInterno ;Define o local pressionado como interno
+		ldi state, atualizaFila ; Define o estado para 'atualizaFila'
+		rjmp maquina_estados
 
-	button_pressed_close:
+	botao_interno_andar2_pressed:
 		rcall delay20ms ;Aguarda 20ms
-		ldi state, parado
+		ldi andarPressionado, botao_interno_andar2 ;Define o andar pressionado como 2
+		ldi localPressionado, botaoInterno ;Define o local pressionado como interno
+		ldi state, atualizaFila ; Define o estado para 'atualizaFila'
+		rjmp maquina_estados
+
+	botao_interno_andar3_pressed:
+		rcall delay20ms ;Aguarda 20ms
+		ldi andarPressionado, botao_interno_andar3 ;Define o andar pressionado como 3
+		ldi localPressionado, botaoInterno ;Define o local pressionado como interno
+		ldi state, atualizaFila ; Define o estado para 'atualizaFila'
+		rjmp maquina_estados
+
+	botao_externo_terreo_pressed:
+		rcall delay20ms ;Aguarda 20ms
+		ldi andarPressionado, botao_externo_terreo ;Define o andar pressionado como 0
+		ldi localPressionado, botaoExterno ;Define o local pressionado como externo
+		ldi state, atualizaFila ; Define o estado para 'atualizaFila'
+		rjmp maquina_estados
+
+	botao_externo_andar1_pressed:
+		rcall delay20ms ;Aguarda 20ms
+		ldi andarPressionado, botao_externo_andar1 ;Define o andar pressionado como 1
+		ldi localPressionado, botaoExterno ;Define o local pressionado como externo
+		ldi state, atualizaFila ; Define o estado para 'atualizaFila'
+		rjmp maquina_estados
+	
+	botao_externo_andar2_pressed:
+		rcall delay20ms ;Aguarda 20ms
+		ldi andarPressionado, botao_externo_andar2 ;Define o andar pressionado como 2
+		ldi localPressionado, botaoExterno ;Define o local pressionado como externo
+		ldi state, atualizaFila ; Define o estado para 'atualizaFila'
+		rjmp maquina_estados
+	
+	botao_externo_andar3_pressed:
+		rcall delay20ms ;Aguarda 20ms
+		ldi andarPressionado, botao_externo_andar3 ;Define o andar pressionado como 3
+		ldi localPressionado, botaoExterno ;Define o local pressionado como externo
+		ldi state, atualizaFila ; Define o estado para 'atualizaFila'
+		rjmp maquina_estados
+
+	;button_pressed_open:
+	;	rcall delay20ms ;Aguarda 20ms
+	;	ldi state, abrir
+
+	;button_pressed_close:
+	;	rcall delay20ms ;Aguarda 20ms
+	;	ldi state, parado
 		
 
-	skip:
-	; switch(state)
+	maquina_estados:
+		; switch(state)
 
-	cpi state, inicio
-	breq case_inicio
+		cpi state, inicio
+		breq case_inicio
 
-	cpi state, parado
-	breq case_parado
+		cpi state, parado
+		breq case_parado
 
-	cpi state, abrir
-	breq case_abrir
+		cpi state, abrir
+		breq case_abrir
 
-	cpi state, buzzerLigado
-	breq case_buzzerLigado
+		cpi state, buzzerLigado
+		breq case_buzzerLigado
 
-	cpi state, atualizaFila
-	breq case_atualizaFila
+		cpi state, atualizaFila
+		breq case_atualizaFila
 
-	cpi state, movendoCima
-	breq case_movendoCima
+		cpi state, movendoCima
+		breq case_movendoCima
 
-	cpi state, movendoBaixo
-	breq case_movendoBaixo
+		cpi state, movendoBaixo
+		breq case_movendoBaixo
 
-	cpi state, trocaAndar
-	breq case_trocaAndar
+		cpi state, trocaAndar
+		breq case_trocaAndar
 
-	cpi state, chegou
-	breq case_chegou
+		cpi state, chegou
+		breq case_chegou
 
-	;sbic PINC, PC0 ;botão solto? ;sbic = skip if bit in I/O register cleared
-	;rjmp led_on ;Não, desvia para ligar LED
-	;cbi PORTB, PB4 ;Sim ,desliga LED ;cbi = clear bit in I/O register
-	rjmp loop ;Volta ao começo do loop
+		;sbic PINC, PC0 ;botão solto? ;sbic = skip if bit in I/O register cleared
+		;rjmp led_on ;Não, desvia para ligar LED
+		;cbi PORTB, PB4 ;Sim ,desliga LED ;cbi = clear bit in I/O register
+		rjmp loop ;Volta ao começo do loop
 
 case_inicio:
 	ldi state, parado
 	jmp loop
 case_parado:
-	rjmp led_on ;Não, desvia para ligar LED
+	
 	jmp loop
 case_abrir:
 	
@@ -195,7 +249,7 @@ case_buzzerLigado:
 
 	jmp loop
 case_atualizaFila:
-
+	rjmp led_on 
 	jmp loop
 case_movendoCima:
 
@@ -211,7 +265,28 @@ case_chegou:
 	jmp loop
 
 led_on:
-	ldi temp, display_dois
+	cpi andarPressionado, 0
+	brne next1
+	rcall set_display_zero
+
+	next1:
+	cpi andarPressionado, 1
+	brne next2
+	rcall set_display_um
+
+	next2:
+	cpi andarPressionado, 2
+	brne next3
+	rcall set_display_dois
+
+	next3:
+	cpi andarPressionado, 3
+	brne continue
+	rcall set_display_tres
+
+	continue: 
+
+	;ldi temp, display_dois
 	ldi r19, (1 << led)
 	or temp, r19
 	out PORTD, temp
@@ -219,3 +294,19 @@ led_on:
 	;sbi PORTD, buzzer ;Liga LED ;sbi set bit in I/O register
 	rjmp loop
 
+
+set_display_zero:
+	ldi temp, display_zero
+	ret
+
+set_display_um:
+	ldi temp, display_um
+	ret
+
+set_display_dois:
+	ldi temp, display_dois
+	ret
+
+set_display_tres:
+	ldi temp, display_tres
+	ret
