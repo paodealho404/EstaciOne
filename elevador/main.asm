@@ -10,7 +10,6 @@ setup:
 	ldi temp, 0b00000000 ;Carrega em temp 00000000
 	out DDRC, temp ;Na porta C terá apenas botões
 
-
 	ldi temp, 0b00001111;Carrega 00001111 em temp
 	out PORTB, temp ;inicializa as portas PB4 (Buzzer) e PB3 (Led) em LOW, e habilita pull-up em PB3, PB2, PB1 e PB0
 
@@ -78,13 +77,21 @@ setup:
 	.equ botao_externo_andar2 = PB2
 	.equ botao_externo_andar3 = PB3
 
+	.equ descendo = 0b0000
+	.equ subindo 	= 0b0001
+
 	.def state = r17 ;Define o nome 'state' para o registrador r17
 	ldi state, inicio ;Define o estado para 'inicio'
+
 	.def andarAtual = r18 ;Define o nome 'andarAtual' para o registrador r18
 	ldi andarAtual, terreo ;Define o andar atual para 0
+
 	.def andarDestino = r20 ;Define o nome 'andarDestino' para o registrador r20
 	.def andarPressionado = r21 ;Define o nome 'andarPressionado' para o registrador r21
 	.def localPressionado = r22 ;Define o nome 'localPressionado' para o registrador r22, 0 para interno e 1 para externo
+	.def tempoMovendo = r23 ;Define o nome 'tempoMovendo' para o registrador r23
+	.def sentido = r24 ;Define o nome 'sentido' para o registrador r24, 1 para cima e 0 para baixo
+	.def chegou = r25 ;Define o nome 'chegou' para o registrador r25, 1 para chegou e 0 para não chegou
 
 	.equ ClockMHz = 16 ;16MHz
 	.equ DelayMs = 20 ;20ms
@@ -237,32 +244,107 @@ loop:
 		rjmp loop ;Volta ao começo do loop
 
 case_inicio:
-	ldi state, parado
+	call exec_inicio
 	jmp loop
 case_parado:
-	
+	call exec_parado
 	jmp loop
 case_abrir:
-	
+	call exec_abrir
 	jmp loop
 case_buzzerLigado:
-
+	call exec_buzzerLigado
 	jmp loop
 case_atualizaFila:
-	rjmp led_on 
+	call exec_atualizaFila
 	jmp loop
 case_movendoCima:
-
+	call exec_movendoCima
 	jmp loop
 case_movendoBaixo:
-
+	call exec_movendoBaixo
 	jmp loop
 case_trocaAndar:
-
+	call exec_trocaAndar
 	jmp loop
 case_chegou:
-
+	call exec_chegou
 	jmp loop
+
+
+
+exec_inicio:
+	ldi state, parado
+	ret
+
+exec_parado:
+
+	ret
+
+exec_abrir:
+	sbi PORTD, led ;Liga Led ;sbi set bit in I/O register
+	ldi chegou, 0 ;Define chegou como 0
+	//TODO: Fazer as transições 
+	ret
+
+exec_buzzerLigado:
+	sbi PORTD, buzzer ;Liga Buzzer ;sbi set bit in I/O register
+	
+	//TODO: Fazer as transições 
+	ret
+
+exec_atualizaFila:
+	/* Implementacao da Fila */
+	
+	//Decisao do Destino 
+	clr andarDestino
+	add andarDestino, andarPressionado ;Define o andar destino como o andar pressionado
+
+	cp andarAtual, andarDestino ;Compara andar destino com andar atual
+	brlt destino_maior ;Desvia para destino_maior se andarAtual < andarDestino
+	cp andarAtual, andarDestino ;Compara andar destino com andar atual
+	breq destino_igual ;Desvia para destino_igual se andarAtual = andarDestino
+	
+	destino_menor:
+		ldi state, movendoBaixo
+		rjmp desvio_final
+
+	destino_maior:
+		ldi state, movendoCima
+		rjmp desvio_final
+
+	destino_igual:
+		ldi state, parado
+
+	desvio_final:
+	
+	//TODO: Fazer as transições 
+	ret
+
+exec_movendoBaixo:
+	; ldi state, movendoBaixo ;Define o estado como movendoBaixo
+	;ldi sentido, descendo ;Define o sentido como descendo
+
+	;cpi tempoMovendo, 3
+	;brlt skip3 ;Se o tempo de movimento for menor que 3, o elevador ainda não chegou ao andar destino
+	;ldi state, trocaAndar ;Define o estado como trocaAndar
+	
+	//TODO: Fazer as transições 
+	ret
+
+exec_movendoCima:
+
+	
+	//TODO: Fazer as transições 
+	ret
+
+exec_trocaAndar:
+	cpse andarDestino, andarAtual ;if andarDestino == andarAtual, pula a próxima instrução
+	
+	rjmp chegou ;Se o andar destino for igual ao andar atual, o elevador chegou ao andar destino
+	ret
+
+exec_chegou:
 
 led_on:
 	cpi andarPressionado, 0
@@ -291,7 +373,7 @@ led_on:
 	or temp, r19
 	out PORTD, temp
 	;sbi PORTD, led ;Liga LED ;sbi set bit in I/O register
-	;sbi PORTD, buzzer ;Liga LED ;sbi set bit in I/O register
+	;sbi PORTD, buzzer ;Liga Buzzer ;sbi set bit in I/O register
 	rjmp loop
 
 
