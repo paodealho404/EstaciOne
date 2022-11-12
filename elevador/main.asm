@@ -31,7 +31,7 @@ setup:
 	* 0111 - TrocaAndar
 	* 1000 - Chegou
 	*/
-
+	
 	.equ inicio = 0b0000
 	.equ parado = 0b0001
 	.equ abrir = 0b0010
@@ -89,9 +89,9 @@ setup:
 	.def andarDestino = r20 ;Define o nome 'andarDestino' para o registrador r20
 	.def andarPressionado = r21 ;Define o nome 'andarPressionado' para o registrador r21
 	.def localPressionado = r22 ;Define o nome 'localPressionado' para o registrador r22, 0 para interno e 1 para externo
-	.def tempoMovendo = r23 ;Define o nome 'tempoMovendo' para o registrador r23
+	.def tempoAguardando = r23 ;Define o nome 'tempoAguardando' para o registrador r23
 	.def sentido = r24 ;Define o nome 'sentido' para o registrador r24, 1 para cima e 0 para baixo
-	.def chegou = r25 ;Define o nome 'chegou' para o registrador r25, 1 para chegou e 0 para não chegou
+	.def var_chegou = r25 ;Define o nome 'var_chegou' para o registrador r25, 1 para chegou e 0 para não chegou
 
 	.equ ClockMHz = 16 ;16MHz
 	.equ DelayMs = 20 ;20ms
@@ -135,11 +135,11 @@ loop:
 	sbic PINB, botao_externo_andar3 ;Se o botão externo do terceiro andar for pressionado
 	rjmp botao_externo_andar3_pressed ;Pula para a rotina botao_externo_andar3_pressed
 
-	;sbic PINC, botao_abrir ;Se o botão de abrir for pressionado
-	;rjmp button_pressed_open
+	sbic PINC, botao_abrir ;Se o botão de abrir for pressionado
+	rjmp botao_abrir_pressed ; Pula para a rotina botao_abrir_pressed
 
-	;sbic PINC, botao_fechar ;Se o botão de fechar for pressionado
-	;rjmp button_pressed_close
+	sbic PINC, botao_fechar ;Se o botão de fechar for pressionado
+	rjmp botao_fechar_pressed ; Pula para a rotina botao_fechar_pressed
 
 	rjmp maquina_estados
 
@@ -147,65 +147,57 @@ loop:
 		rcall delay20ms ;Aguarda 20ms
 		ldi andarPressionado, botao_interno_terreo ;Define o andar pressionado como 0
 		ldi localPressionado, botaoInterno ;Define o local pressionado como interno
-		ldi state, atualizaFila ; Define o estado para 'atualizaFila'
 		rjmp maquina_estados
 
 	botao_interno_andar1_pressed:
 		rcall delay20ms ;Aguarda 20ms
 		ldi andarPressionado, botao_interno_andar1 ;Define o andar pressionado como 1
 		ldi localPressionado, botaoInterno ;Define o local pressionado como interno
-		ldi state, atualizaFila ; Define o estado para 'atualizaFila'
 		rjmp maquina_estados
 
 	botao_interno_andar2_pressed:
 		rcall delay20ms ;Aguarda 20ms
 		ldi andarPressionado, botao_interno_andar2 ;Define o andar pressionado como 2
 		ldi localPressionado, botaoInterno ;Define o local pressionado como interno
-		ldi state, atualizaFila ; Define o estado para 'atualizaFila'
 		rjmp maquina_estados
 
 	botao_interno_andar3_pressed:
 		rcall delay20ms ;Aguarda 20ms
 		ldi andarPressionado, botao_interno_andar3 ;Define o andar pressionado como 3
 		ldi localPressionado, botaoInterno ;Define o local pressionado como interno
-		ldi state, atualizaFila ; Define o estado para 'atualizaFila'
 		rjmp maquina_estados
 
 	botao_externo_terreo_pressed:
 		rcall delay20ms ;Aguarda 20ms
 		ldi andarPressionado, botao_externo_terreo ;Define o andar pressionado como 0
 		ldi localPressionado, botaoExterno ;Define o local pressionado como externo
-		ldi state, atualizaFila ; Define o estado para 'atualizaFila'
 		rjmp maquina_estados
 
 	botao_externo_andar1_pressed:
 		rcall delay20ms ;Aguarda 20ms
 		ldi andarPressionado, botao_externo_andar1 ;Define o andar pressionado como 1
 		ldi localPressionado, botaoExterno ;Define o local pressionado como externo
-		ldi state, atualizaFila ; Define o estado para 'atualizaFila'
 		rjmp maquina_estados
 	
 	botao_externo_andar2_pressed:
 		rcall delay20ms ;Aguarda 20ms
 		ldi andarPressionado, botao_externo_andar2 ;Define o andar pressionado como 2
 		ldi localPressionado, botaoExterno ;Define o local pressionado como externo
-		ldi state, atualizaFila ; Define o estado para 'atualizaFila'
 		rjmp maquina_estados
 	
 	botao_externo_andar3_pressed:
 		rcall delay20ms ;Aguarda 20ms
 		ldi andarPressionado, botao_externo_andar3 ;Define o andar pressionado como 3
 		ldi localPressionado, botaoExterno ;Define o local pressionado como externo
-		ldi state, atualizaFila ; Define o estado para 'atualizaFila'
 		rjmp maquina_estados
 
-	;button_pressed_open:
-	;	rcall delay20ms ;Aguarda 20ms
-	;	ldi state, abrir
+	botao_abrir_pressed:
+		rcall delay20ms ;Aguarda 20ms
+		ldi state, abrir
 
-	;button_pressed_close:
-	;	rcall delay20ms ;Aguarda 20ms
-	;	ldi state, parado
+	botao_fechar_pressed:
+		rcall delay20ms ;Aguarda 20ms
+		ldi state, parado
 		
 
 	maquina_estados:
@@ -274,26 +266,59 @@ case_chegou:
 
 
 exec_inicio:
-	ldi state, parado
+	ldi state, parado       ; Transição do estado para parado
+	ldi andarAtual, 0		; Inicia o andarAtual como 0
+	clr andarPressionado	; Inicia o andarPressionado como 0
 	ret
 
 exec_parado:
+	clr tempoAguardando    ; O contador de tempoAguardando é zerado
+	cbi PORTD, led         ; Desliga o LED
+	cbi PORTD, buzzer      ; Desliga o Buzzer
 
+	
+
+	//TODO: Fazer as transições
 	ret
 
 exec_abrir:
-	sbi PORTD, led ;Liga Led ;sbi set bit in I/O register
-	ldi chegou, 0 ;Define chegou como 0
-	//TODO: Fazer as transições 
+	sbi PORTD, led 				; Liga Led 
+	ldi var_chegou, 0 			; Define var_chegou como 0
+
+	sbrs PORTC, botao_fechar	; Verifica se o botao de abrir está pressionado
+	rjmp t_fechar_porta:        ;
+	
+	cpi tempoAguardando, 5
+	brne t_final_abrir
+	ldi state, buzzerLigado
+	rjmp t_final_abrir
+	
+	t_fechar_porta:
+		ldi state, fechar_porta
+
+	t_final_abrir:
 	ret
 
 exec_buzzerLigado:
-	sbi PORTD, buzzer ;Liga Buzzer ;sbi set bit in I/O register
+	sbi PORTD, buzzer 		 ; Liga Buzzer 
 	
-	//TODO: Fazer as transições 
+	cbrs PORTC, botao_abrir  ; Verifica se o botao de abrir está pressionado
+	rjmp fim_b_ligado		 ; Se pressionado pula para o fim
+	
+	cbrs PORTC, botao_fechar ; Verifica se o botao de fechar está pressionado
+	rjmp t_fechar_porta      ; Se pressionado pula para o fim
+
+	cpi tempoAguardando, 10  
+	brge t_fechar_porta		 ; Verifica se o tempo aguardando é maior ou igual a 5
+	rjmp fim_b_ligado 		 ; Se o tempo aguardando for menor que 5 pula pro fim
+
+	t_fechar_porta:
+		ldi state, parado    ; Vai para o estado de parado
+	fim_b_ligado:
 	ret
 
 exec_atualizaFila:
+	//TODO: Implementar tudo
 	/* Implementacao da Fila */
 	
 	//Decisao do Destino 
@@ -306,8 +331,8 @@ exec_atualizaFila:
 	breq destino_igual ;Desvia para destino_igual se andarAtual = andarDestino
 	
 	destino_menor:
-		ldi state, movendoBaixo
-		rjmp desvio_final
+		ldi state, movendoBaixo ;Define o estado como movendoBaixo
+		rjmp desvio_final ; O elevador precisa descer
 
 	destino_maior:
 		ldi state, movendoCima
@@ -317,34 +342,68 @@ exec_atualizaFila:
 		ldi state, parado
 
 	desvio_final:
+	ret
+
+
+exec_movendoCima:
+	ldi var_chegou, 0      ;Define var_chegou como 0
+	ldi sentido, 1         ;Define sentido como 1 (Subindo)
 	
-	//TODO: Fazer as transições 
+	//TODO: Fazer as transições
+	cpi tempoAguardando, 3 ; Compara tempoAguardando com 3
+	brlt nao_subiu         ; Se tempoAguardando < 3 desvia para nao_subiu
+	ldi state, trocaAndar  ; Se tempoAguardando >= 3 define o estado como trocaAndar
+
+	nao_subiu:
+	
 	ret
 
 exec_movendoBaixo:
-	; ldi state, movendoBaixo ;Define o estado como movendoBaixo
-	;ldi sentido, descendo ;Define o sentido como descendo
-
-	;cpi tempoMovendo, 3
-	;brlt skip3 ;Se o tempo de movimento for menor que 3, o elevador ainda não chegou ao andar destino
-	;ldi state, trocaAndar ;Define o estado como trocaAndar
+	ldi var_chegou, 0      ;Define var_chegou como 0
+	ldi sentido, 0         ;Define sentido como 1 (Subindo)
+	//TODO: Fazer as transições
+	cpi tempoAguardando, 3 ; Compara tempoAguardando com 3
+	brlt nao_desceu        ; Se tempoAguardando < 3 desvia para nao_subiu
+	ldi state, trocaAndar  ; Se tempoAguardando >= 3 define o estado como trocaAndar
 	
-	//TODO: Fazer as transições 
-	ret
+	nao_desceu:
 
-exec_movendoCima:
-
-	
-	//TODO: Fazer as transições 
 	ret
 
 exec_trocaAndar:
-	cpse andarDestino, andarAtual ;if andarDestino == andarAtual, pula a próxima instrução
+	clr tempoAguardando  		    ; Zera o tempoAguardando
 	
-	rjmp chegou ;Se o andar destino for igual ao andar atual, o elevador chegou ao andar destino
+	cpi sentido, 1 			  	    ; Compara o sentido com 1
+	brne subtrai_andar 			    ; se sentido != 1 desvia para subtrai_andar
+	subi andarAtual, -1   		  ; Se sentido == 1 soma 1 ao andarAtual
+	rjmp t_ok_calc        		  ; Se o andarAtual já foi alterado pula para t_ok_calc
+
+	subtrai_andar: 
+	subi andarAtual, 1          ; Se sentido != 1 subtrai 1 do andarAtual  
+
+	t_ok_calc:
+	cp andarAtual, andarDestino ; Compara andarAtual com andarDestino
+	brne t_nao_chegou           ; Se andarAtual != andarDestino desvia para t_nao_chegou
+	ldi state, chegou           ; Se andarAtual == andarDestino define o estado como chegou
+	rjmp t_fim_troca_andar:     ; Se o elevador já chegou no andar destino pula para t_fim_troca_andar
+
+	t_nao_chegou:
+	cpi sentido, 1              ; Compara o sentido com 1
+	brne volta_a_descer         ; Se sentido != 1 desvia para volta_a_descer
+	ldi state, movendoCima      ; Se sentido == 1 define o estado como movendoCima
+	rjmp t_fim_troca_andar      ; O elevador não chegou no andar destino, mas ele precisa continuar a subir
+
+	volta_a_descer: 
+	ldi state, movendoBaixo     ; O elevador não chegou no andar destino, mas ele precisa continuar a descer
+
+	t_fim_troca_andar:
 	ret
 
 exec_chegou:
+	ldi var_chegou, 1 ;Define var_chegou como 1
+	ldi state, atualizaFila
+
+	ret
 
 led_on:
 	cpi andarPressionado, 0
