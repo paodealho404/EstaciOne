@@ -47,8 +47,9 @@ setup:
 	.equ segundo  = 0b0010
 	.equ terceiro = 0b0011
 
-	.equ botaoInterno = 0b0000
-	.equ botaoExterno = 0b0001
+	.equ naoPressionado = 0b0000 ;Identifica se algum botão foi pressionado ou se a fila está vazia
+	.equ botaoInterno = 0b0001
+	.equ botaoExterno = 0b0010
 
 	; PORTD
 	.equ led = PD7
@@ -88,17 +89,19 @@ setup:
 
 	.def andarDestino = r20 ;Define o nome 'andarDestino' para o registrador r20
 	.def andarPressionado = r21 ;Define o nome 'andarPressionado' para o registrador r21
-	.def localPressionado = r22 ;Define o nome 'localPressionado' para o registrador r22, 0 para interno e 1 para externo
+	.def tipoChamado = r22 ;Define o nome 'tipoChamado' para o registrador r22, 1 para interno e 2 para externo
 	.def tempoAguardando = r23 ;Define o nome 'tempoAguardando' para o registrador r23
 	.def sentido = r24 ;Define o nome 'sentido' para o registrador r24, 1 para cima e 0 para baixo
 	.def var_chegou = r25 ;Define o nome 'var_chegou' para o registrador r25, 1 para chegou e 0 para não chegou
+	.def filaVazia = r26 ;Define o nome 'filaVazia' para o registrador r26, 1 para vazia e 0 para não vazia
+
 
 	.equ ClockMHz = 16 ;16MHz
 	.equ DelayMs = 20 ;20ms
 
 	rjmp loop
 
-delay20ms:
+debounce:
 	ldi r31, byte3(ClockMHz * 1000 * DelayMs / 5)
 	ldi r30, high(ClockMHz * 1000 * DelayMs / 5)
 	ldi r29, low(ClockMHz * 1000 * DelayMs / 5)
@@ -144,59 +147,59 @@ loop:
 	rjmp maquina_estados
 
 	botao_interno_terreo_pressed:
-		rcall delay20ms ;Aguarda 20ms
+		rcall debounce ;Aguarda 20ms
 		ldi andarPressionado, botao_interno_terreo ;Define o andar pressionado como 0
-		ldi localPressionado, botaoInterno ;Define o local pressionado como interno
+		ldi tipoChamado, botaoInterno ;Define o local pressionado como interno
 		rjmp maquina_estados
 
 	botao_interno_andar1_pressed:
-		rcall delay20ms ;Aguarda 20ms
+		rcall debounce ;Aguarda 20ms
 		ldi andarPressionado, botao_interno_andar1 ;Define o andar pressionado como 1
-		ldi localPressionado, botaoInterno ;Define o local pressionado como interno
+		ldi tipoChamado, botaoInterno ;Define o local pressionado como interno
 		rjmp maquina_estados
 
 	botao_interno_andar2_pressed:
-		rcall delay20ms ;Aguarda 20ms
+		rcall debounce ;Aguarda 20ms
 		ldi andarPressionado, botao_interno_andar2 ;Define o andar pressionado como 2
-		ldi localPressionado, botaoInterno ;Define o local pressionado como interno
+		ldi tipoChamado, botaoInterno ;Define o local pressionado como interno
 		rjmp maquina_estados
 
 	botao_interno_andar3_pressed:
-		rcall delay20ms ;Aguarda 20ms
+		rcall debounce ;Aguarda 20ms
 		ldi andarPressionado, botao_interno_andar3 ;Define o andar pressionado como 3
-		ldi localPressionado, botaoInterno ;Define o local pressionado como interno
+		ldi tipoChamado, botaoInterno ;Define o local pressionado como interno
 		rjmp maquina_estados
 
 	botao_externo_terreo_pressed:
-		rcall delay20ms ;Aguarda 20ms
+		rcall debounce ;Aguarda 20ms
 		ldi andarPressionado, botao_externo_terreo ;Define o andar pressionado como 0
-		ldi localPressionado, botaoExterno ;Define o local pressionado como externo
+		ldi tipoChamado, botaoExterno ;Define o local pressionado como externo
 		rjmp maquina_estados
 
 	botao_externo_andar1_pressed:
-		rcall delay20ms ;Aguarda 20ms
+		rcall debounce ;Aguarda 20ms
 		ldi andarPressionado, botao_externo_andar1 ;Define o andar pressionado como 1
-		ldi localPressionado, botaoExterno ;Define o local pressionado como externo
+		ldi tipoChamado, botaoExterno ;Define o local pressionado como externo
 		rjmp maquina_estados
 	
 	botao_externo_andar2_pressed:
-		rcall delay20ms ;Aguarda 20ms
+		rcall debounce ;Aguarda 20ms
 		ldi andarPressionado, botao_externo_andar2 ;Define o andar pressionado como 2
-		ldi localPressionado, botaoExterno ;Define o local pressionado como externo
+		ldi tipoChamado, botaoExterno ;Define o local pressionado como externo
 		rjmp maquina_estados
 	
 	botao_externo_andar3_pressed:
-		rcall delay20ms ;Aguarda 20ms
+		rcall debounce ;Aguarda 20ms
 		ldi andarPressionado, botao_externo_andar3 ;Define o andar pressionado como 3
-		ldi localPressionado, botaoExterno ;Define o local pressionado como externo
+		ldi tipoChamado, botaoExterno ;Define o local pressionado como externo
 		rjmp maquina_estados
 
 	botao_abrir_pressed:
-		rcall delay20ms ;Aguarda 20ms
+		rcall debounce ;Aguarda 20ms
 		ldi state, abrir
 
 	botao_fechar_pressed:
-		rcall delay20ms ;Aguarda 20ms
+		rcall debounce ;Aguarda 20ms
 		ldi state, parado
 		
 
@@ -268,6 +271,7 @@ case_chegou:
 exec_inicio:
 	ldi state, parado       ; Transição do estado para parado
 	ldi andarAtual, 0		; Inicia o andarAtual como 0
+	ldi tipoChamado, naoPressionado
 	clr andarPressionado	; Inicia o andarPressionado como 0
 	ret
 
@@ -276,9 +280,15 @@ exec_parado:
 	cbi PORTD, led         ; Desliga o LED
 	cbi PORTD, buzzer      ; Desliga o Buzzer
 
-	
+	;cpi filaVazia, 1 ;Verifica se a fila está vazia
+	;breq fim_parado ;Se sim, desvia para fim_parado
+	cpi tipoChamado, naoPressionado
+	breq fim_parado
 
-	//TODO: Fazer as transições
+	ldi state, atualizaFila
+
+	fim_parado:
+	
 	ret
 
 exec_abrir:
@@ -321,8 +331,10 @@ exec_atualizaFila:
 	//TODO: Implementar tudo
 	/* Implementacao da Fila */
 	
+
+	;; Precisa dar clear no tipoChamado
 	//Decisao do Destino 
-	clr andarDestino
+	clr andarDestino                   ; Zera o andarDestino
 	add andarDestino, andarPressionado ;Define o andar destino como o andar pressionado
 
 	cp andarAtual, andarDestino ;Compara andar destino com andar atual
@@ -330,16 +342,17 @@ exec_atualizaFila:
 	cp andarAtual, andarDestino ;Compara andar destino com andar atual
 	breq destino_igual ;Desvia para destino_igual se andarAtual = andarDestino
 	
+	
 	destino_menor:
 		ldi state, movendoBaixo ;Define o estado como movendoBaixo
-		rjmp desvio_final ; O elevador precisa descer
+		rjmp desvio_final       ;O elevador precisa descer, então desvia para o final
 
 	destino_maior:
-		ldi state, movendoCima
-		rjmp desvio_final
+		ldi state, movendoCima  ;Define o estado como movendoCima
+		rjmp desvio_final       ;O elevador precisa subir, então desvia para o final
 
 	destino_igual:
-		ldi state, parado
+		ldi state, parado       ;Define o estado como parado
 
 	desvio_final:
 	ret
@@ -350,9 +363,16 @@ exec_movendoCima:
 	ldi sentido, 1         ;Define sentido como 1 (Subindo)
 	
 	//TODO: Fazer as transições
+	cpi tipoChamado, naoPressionado ; Compara tipoChamado com 0
+	brne movendo_cima_chamada						; Se tipoChamado != 0, pula para movendo_cima_chamada
+
 	cpi tempoAguardando, 3 ; Compara tempoAguardando com 3
 	brlt nao_subiu         ; Se tempoAguardando < 3 desvia para nao_subiu
 	ldi state, trocaAndar  ; Se tempoAguardando >= 3 define o estado como trocaAndar
+	rjmp nao_subiu
+
+	movendo_cima_chamada:
+		ldi state, atualizaFila
 
 	nao_subiu:
 	
@@ -360,12 +380,19 @@ exec_movendoCima:
 
 exec_movendoBaixo:
 	ldi var_chegou, 0      ;Define var_chegou como 0
-	ldi sentido, 0         ;Define sentido como 1 (Subindo)
+	ldi sentido, 0         ;Define sentido como 0 (Descendo)
 	//TODO: Fazer as transições
+	cpi tipoChamado, naoPressionado ; Compara tipoChamado com 0
+	brne movendo_baixo_chamada						; Se tipoChamado != 0, pula para movendo_baixo_chamada
+
 	cpi tempoAguardando, 3 ; Compara tempoAguardando com 3
 	brlt nao_desceu        ; Se tempoAguardando < 3 desvia para nao_subiu
 	ldi state, trocaAndar  ; Se tempoAguardando >= 3 define o estado como trocaAndar
+	rjmp nao_desceu
 	
+	movendo_baixo_chamada:
+		ldi state, atualizaFila
+
 	nao_desceu:
 
 	ret
@@ -380,6 +407,7 @@ exec_trocaAndar:
 
 	subtrai_andar: 
 	subi andarAtual, 1          ; Se sentido != 1 subtrai 1 do andarAtual  
+
 
 	t_ok_calc:
 	cp andarAtual, andarDestino ; Compara andarAtual com andarDestino
@@ -397,57 +425,53 @@ exec_trocaAndar:
 	ldi state, movendoBaixo     ; O elevador não chegou no andar destino, mas ele precisa continuar a descer
 
 	t_fim_troca_andar:
+		call muda_display_andar  ; Atualiza o display do andar
 	ret
 
 exec_chegou:
-	ldi var_chegou, 1 ;Define var_chegou como 1
-	ldi state, atualizaFila
+	ldi var_chegou, 1 			;Define var_chegou como 1
+	ldi state, atualizaFila ;Define o estado como atualizaFila
 
 	ret
 
-led_on:
-	cpi andarPressionado, 0
-	brne next1
-	rcall set_display_zero
+muda_display_andar:
+	cpi andarAtual, 0       ; Compara andarAtual com 0
+	brne next1              ; Se andarAtual != 0 desvia para next1
+	rcall set_display_zero  ; Se andarAtual == 0 chama a rotina set_display_zero, que define o 'temp' como 0
 
 	next1:
-	cpi andarPressionado, 1
-	brne next2
-	rcall set_display_um
+	cpi andarAtual, 1       ; Compara andarAtual com 1
+	brne next2							; Se andarAtual != 1 desvia para next2
+	rcall set_display_um    ; Se andarAtual == 1 chama a rotina set_display_um, que define o 'temp' como 1
 
 	next2:
-	cpi andarPressionado, 2
-	brne next3
-	rcall set_display_dois
+	cpi andarAtual, 2       ; Compara andarAtual com 2
+	brne next3              ; Se andarAtual != 2 desvia para next3
+	rcall set_display_dois  ; Se andarAtual == 2 chama a rotina set_display_dois, que define o 'temp' como 2
 
 	next3:
-	cpi andarPressionado, 3
-	brne continue
-	rcall set_display_tres
+	cpi andarAtual, 3 			; Compara andarAtual com 3
+	brne continue           ; Se andarAtual != 3 desvia para continue
+	rcall set_display_tres  ; Se andarAtual == 3 chama a rotina set_display_tres, que define o 'temp' como 3
 
 	continue: 
 
-	;ldi temp, display_dois
-	ldi r19, (1 << led)
-	or temp, r19
-	out PORTD, temp
-	;sbi PORTD, led ;Liga LED ;sbi set bit in I/O register
-	;sbi PORTD, buzzer ;Liga Buzzer ;sbi set bit in I/O register
-	rjmp loop
+	out PORTD, temp         ; Define o PORTD com o valor de 'temp', que é o valor que será mostrado no display
+	ret
 
 
 set_display_zero:
-	ldi temp, display_zero
+	ldi temp, display_zero  ; Define 'temp' como 0
 	ret
 
 set_display_um:
-	ldi temp, display_um
+	ldi temp, display_um    ; Define 'temp' como 1
 	ret
 
 set_display_dois:
-	ldi temp, display_dois
+	ldi temp, display_dois  ; Define 'temp' como 2
 	ret
 
 set_display_tres:
-	ldi temp, display_tres
+	ldi temp, display_tres  ; Define 'temp' como 3
 	ret
