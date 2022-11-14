@@ -294,7 +294,7 @@ exec_abrir:
 	rjmp t_final_abrir
 	
 	t_fechar_porta:
-		ldi state, fechar_porta
+		ldi state, parado
 
 	t_final_abrir:
 	ret
@@ -302,17 +302,17 @@ exec_abrir:
 exec_buzzerLigado:
 	sbi PORTD, buzzer 		 ; Liga Buzzer 
 	
-	sbrc PORTC, botao_abrir  ; Verifica se o botao de abrir está pressionado
+	sbic PORTC, botao_abrir  ; Verifica se o botao de abrir está pressionado
 	rjmp fim_b_ligado		 ; Se pressionado pula para o fim
 	
-	sbrc PORTC, botao_fechar ; Verifica se o botao de fechar está pressionado
-	rjmp t_fechar_porta      ; Se pressionado pula para o fim
+	sbic PORTC, botao_fechar ; Verifica se o botao de fechar está pressionado
+	rjmp t_fechar_porta2      ; Se pressionado pula para o fim
 
 	cpi tempoAguardando, 10  
-	brge t_fechar_porta		 ; Verifica se o tempo aguardando é maior ou igual a 5
+	brge t_fechar_porta2		 ; Verifica se o tempo aguardando é maior ou igual a 5
 	rjmp fim_b_ligado 		 ; Se o tempo aguardando for menor que 5 pula pro fim
 
-	t_fechar_porta:
+	t_fechar_porta2:
 		ldi state, parado    ; Vai para o estado de parado
 	fim_b_ligado:
 	ret
@@ -385,7 +385,7 @@ exec_trocaAndar:
 	cp andarAtual, andarDestino ; Compara andarAtual com andarDestino
 	brne t_nao_chegou           ; Se andarAtual != andarDestino desvia para t_nao_chegou
 	ldi state, chegou           ; Se andarAtual == andarDestino define o estado como chegou
-	rjmp t_fim_troca_andar:     ; Se o elevador já chegou no andar destino pula para t_fim_troca_andar
+	rjmp t_fim_troca_andar     ; Se o elevador já chegou no andar destino pula para t_fim_troca_andar
 
 	t_nao_chegou:
 	cpi sentido, 1              ; Compara o sentido com 1
