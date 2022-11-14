@@ -286,7 +286,7 @@ exec_abrir:
 	ldi var_chegou, 0 			; Define var_chegou como 0
 
 	sbrs PORTC, botao_fechar	; Verifica se o botao de abrir está pressionado
-	rjmp t_fechar_porta:        ;
+	rjmp t_fechar_porta        ;
 	
 	cpi tempoAguardando, 5
 	brne t_final_abrir
@@ -302,10 +302,10 @@ exec_abrir:
 exec_buzzerLigado:
 	sbi PORTD, buzzer 		 ; Liga Buzzer 
 	
-	cbrs PORTC, botao_abrir  ; Verifica se o botao de abrir está pressionado
+	sbrc PORTC, botao_abrir  ; Verifica se o botao de abrir está pressionado
 	rjmp fim_b_ligado		 ; Se pressionado pula para o fim
 	
-	cbrs PORTC, botao_fechar ; Verifica se o botao de fechar está pressionado
+	sbrc PORTC, botao_fechar ; Verifica se o botao de fechar está pressionado
 	rjmp t_fechar_porta      ; Se pressionado pula para o fim
 
 	cpi tempoAguardando, 10  
