@@ -285,7 +285,7 @@ exec_abrir:
 	sbi PORTD, led 				; Liga Led 
 	ldi var_chegou, 0 			; Define var_chegou como 0
 
-	sbrs PORTC, botao_fechar	; Verifica se o botao de abrir está pressionado
+	sbic PORTC, botao_fechar	; Verifica se o botao de abrir está pressionado
 	rjmp t_fechar_porta        ;
 	
 	cpi tempoAguardando, 5
