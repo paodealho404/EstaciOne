@@ -1,3 +1,8 @@
+.cseg
+jmp setup
+.org OC1Aaddr
+jmp timer_1_sec_interrupt
+
 setup:
 	.def temp = r16 ;Define o nome 'temp' para o registrador r16
 	ldi temp, 0b00000000 ;Carrega em temp 00000000
@@ -92,14 +97,53 @@ setup:
 	.def tipoChamado = r22 ;Define o nome 'tipoChamado' para o registrador r22, 1 para interno e 2 para externo
 	.def tempoAguardando = r23 ;Define o nome 'tempoAguardando' para o registrador r23
 	.def sentido = r24 ;Define o nome 'sentido' para o registrador r24, 1 para cima e 0 para baixo
-	.def var_chegou = r25 ;Define o nome 'var_chegou' para o registrador r25, 1 para chegou e 0 para não chegou
-	.def filaVazia = r26 ;Define o nome 'filaVazia' para o registrador r26, 1 para vazia e 0 para não vazia
+	.def var_chegou = r25 ;Define o nome 'var_chegou' para o registrador r25, 1 para chegou e 0 para não 
 
 
 	.equ ClockMHz = 16 ;16MHz
 	.equ DelayMs = 20 ;20ms
+	
+	/* Configurando Timer de 1 segundo */
+	.equ TimerDelaySeg = 1
+	.equ PreScaleDiv = 256
+	.equ PreScaleMask = 0b100
+	.equ TOP = int(0.5 + ((ClockMhz*1000000/PreScaleDiv)*TimerDelaySeg)); 1s --> TOP = 62500 com prescaler de 256
+	.equ WGM = 0b0100 ; Configura o modo de operação do timer para CTC 
+
+	ldi temp, high(TOP) ; Carregando TOP em OCR1A
+	sts OCR1AH, temp    
+	ldi temp, low(TOP)
+	sts OCR1AL, temp
+
+	ldi temp, ((WGM&0b11)<<WGM10) ; Carrega WGM e PreScale
+	sts TCCR1A, temp 
+	ldi temp, ((WGM>> 2) << WGM12)|(PreScaleMask << CS10)
+	sts TCCR1B, temp 
+
+	lds temp, TIMSK1
+	sbr temp, 1 <<OCIE1A
+	sts TIMSK1, temp
 
 	rjmp loop
+
+timer_1_sec_interrupt:
+	push r16
+	in r16, SREG
+	push r16
+	
+	cpi state, parado								;Compara o estado com o estado parado
+	breq timer_1_sec_interrupt_end  ;Se state == parado, não incrementa o tempoAguardando
+	inc tempoAguardando
+	 
+
+	timer_1_sec_interrupt_end:	
+		pop r16
+		out SREG, r16
+		pop r16
+	
+
+	sei
+	reti
 
 debounce:
 	ldi r31, byte3(ClockMHz * 1000 * DelayMs / 5)
@@ -114,6 +158,7 @@ debounce:
 	ret
 
 loop:
+	sei
 	sbic PINC, botao_interno_terreo ;Se o botão interno do térreo for pressionado
 	rjmp botao_interno_terreo_pressed ;Pula para a rotina botao_interno_terreo_pressed
 
@@ -138,11 +183,11 @@ loop:
 	sbic PINB, botao_externo_andar3 ;Se o botão externo do terceiro andar for pressionado
 	rjmp botao_externo_andar3_pressed ;Pula para a rotina botao_externo_andar3_pressed
 
-	sbic PINC, botao_abrir ;Se o botão de abrir for pressionado
-	rjmp botao_abrir_pressed ; Pula para a rotina botao_abrir_pressed
+	;sbic PINC, botao_abrir ;Se o botão de abrir for pressionado
+	;rjmp botao_abrir_pressed ; Pula para a rotina botao_abrir_pressed
 
-	sbic PINC, botao_fechar ;Se o botão de fechar for pressionado
-	rjmp botao_fechar_pressed ; Pula para a rotina botao_fechar_pressed
+	;sbic PINC, botao_fechar ;Se o botão de fechar for pressionado
+	;rjmp botao_fechar_pressed ; Pula para a rotina botao_fechar_pressed
 
 	rjmp maquina_estados
 
@@ -197,11 +242,12 @@ loop:
 	botao_abrir_pressed:
 		rcall debounce ;Aguarda 20ms
 		ldi state, abrir
+		ret
 
 	botao_fechar_pressed:
 		rcall debounce ;Aguarda 20ms
 		ldi state, parado
-		
+		ret	
 
 	maquina_estados:
 		; switch(state)
@@ -282,29 +328,45 @@ exec_parado:
 
 	;cpi filaVazia, 1 ;Verifica se a fila está vazia
 	;breq fim_parado ;Se sim, desvia para fim_parado
-	cpi tipoChamado, naoPressionado
-	breq fim_parado
 
-	ldi state, atualizaFila
+	sbic PINC, botao_abrir  ; Verifica se o botao de abrir está pressionado
+	rjmp abrir_porta_inicio		 ; Se pressionado pula para abrir_porta_inicio
+
+	cpi var_chegou, 1 ;Verifica se chegou no andar
+	brne nao_chegou ; Se chegou != 1, desvia para nao_chegou
+	ldi state, abrir ;Se chegou == 1, muda o estado para abrir
+	rjmp fim_parado
+
+	nao_chegou:
+
+	cpi tipoChamado, naoPressionado  ;Compara o tipoChamado com o valor de naoPressionado (0)
+	breq fim_parado                  ;Se tipoChamado == 0, desvia para fim_parado
+	ldi state, atualizaFila          ;Se tipoChamado != 0, define o estado como atualizaFila
+  rjmp fim_parado
+
+	abrir_porta_inicio:
+		call botao_abrir_pressed
 
 	fim_parado:
-	
+
+	clr tempoAguardando		; O contador de tempoAguardando é zerado
 	ret
 
 exec_abrir:
 	sbi PORTD, led 				; Liga Led 
 	ldi var_chegou, 0 			; Define var_chegou como 0
 
-	sbic PORTC, botao_fechar	; Verifica se o botao de abrir está pressionado
+	sbic PINC, botao_fechar	; Verifica se o botao de abrir está pressionado
 	rjmp t_fechar_porta        ;
 	
-	cpi tempoAguardando, 5
-	brne t_final_abrir
-	ldi state, buzzerLigado
-	rjmp t_final_abrir
+	cpi tempoAguardando, 5   ; Compara tempoAguardando com 5
+	brne t_final_abrir       ; Se tempoAguardando != 5, desvia para t_final_abrir
+	ldi state, buzzerLigado  ; Se TempoAguardando == 5, seta o estado para buzzerLigado
+	rjmp t_final_abrir       ; Desvia para t_final_abrir
 	
 	t_fechar_porta:
-		ldi state, parado
+		call botao_fechar_pressed
+		;ldi state, parado
 
 	t_final_abrir:
 	ret
@@ -312,27 +374,37 @@ exec_abrir:
 exec_buzzerLigado:
 	sbi PORTD, buzzer 		 ; Liga Buzzer 
 	
-	sbic PORTC, botao_abrir  ; Verifica se o botao de abrir está pressionado
+	sbic PINC, botao_abrir  ; Verifica se o botao de abrir está pressionado
 	rjmp fim_b_ligado		 ; Se pressionado pula para o fim
 	
-	sbic PORTC, botao_fechar ; Verifica se o botao de fechar está pressionado
+	sbic PINC, botao_fechar ; Verifica se o botao de fechar está pressionado
 	rjmp t_fechar_porta2      ; Se pressionado pula para o fim
 
-	cpi tempoAguardando, 10  
-	brge t_fechar_porta2		 ; Verifica se o tempo aguardando é maior ou igual a 5
-	rjmp fim_b_ligado 		 ; Se o tempo aguardando for menor que 5 pula pro fim
+	cpi tempoAguardando, 10  ; Compara tempoAguardando com 10
+	brge t_fechar_porta2		 ; Se tempoAguardando >= 10, desvia para t_fechar_porta2
+	rjmp fim_b_ligado 		 	 ; Se tempoAguardando < 10, desvia para fim_b_ligado
 
 	t_fechar_porta2:
-		ldi state, parado    ; Vai para o estado de parado
+		call botao_fechar_pressed
+		;ldi state, parado    ; Vai para o estado de parado
 	fim_b_ligado:
 	ret
 
 exec_atualizaFila:
 	//TODO: Implementar tudo
 	/* Implementacao da Fila */
-	
+	;cpi sentido, subindo            ; Verifica se o sentido é subindo
+	;brne fila_descendo 			    ; Se sentido não for subindo desvia para fila_descendo
+	; Operações para fila subindo
+	;subi andarAtual, -1   		  	; Se sentido for subindo soma 1 ao andarAtual
+	;rjmp t_ok_calc        		  	; Se o andarAtual já foi alterado pula para t_ok_calc
+
+	;fila_descendo: 
+		; Operações para fila descendo
+		;subi andarAtual, 1          ; Se sentido não for subindo subtrai 1 do andarAtual 
 
 	;; Precisa dar clear no tipoChamado
+	clr tipoChamado
 	//Decisao do Destino 
 	clr andarDestino                   ; Zera o andarDestino
 	add andarDestino, andarPressionado ;Define o andar destino como o andar pressionado
