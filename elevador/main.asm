@@ -206,56 +206,56 @@ loop:
 		rcall debounce ;Aguarda 20ms
 		ldi andarPressionado, botao_interno_terreo ;Define o andar pressionado como 0
 		ldi tipoChamado, botaoInterno ;Define o local pressionado como interno
-		sbr regFila, filaTerreoInterno
+		sbr regFila, 1 << filaTerreoInterno
 		rjmp maquina_estados
 
 	botao_interno_andar1_pressed:
 		rcall debounce ;Aguarda 20ms
 		ldi andarPressionado, botao_interno_andar1 ;Define o andar pressionado como 1
 		ldi tipoChamado, botaoInterno ;Define o local pressionado como interno
-		sbr regFila, filaPrimeiroInterno
+		sbr regFila, 1 << filaPrimeiroInterno
 		rjmp maquina_estados
 
 	botao_interno_andar2_pressed:
 		rcall debounce ;Aguarda 20ms
 		ldi andarPressionado, botao_interno_andar2 ;Define o andar pressionado como 2
 		ldi tipoChamado, botaoInterno ;Define o local pressionado como interno
-		sbr regFila, filaSegundoInterno
+		sbr regFila, 1 << filaSegundoInterno
 		rjmp maquina_estados
 
 	botao_interno_andar3_pressed:
 		rcall debounce ;Aguarda 20ms
 		ldi andarPressionado, botao_interno_andar3 ;Define o andar pressionado como 3
 		ldi tipoChamado, botaoInterno ;Define o local pressionado como interno
-		sbr regFila, filaTerceiroInterno
+		sbr regFila, 1 << filaTerceiroInterno
 		rjmp maquina_estados
 
 	botao_externo_terreo_pressed:
 		rcall debounce ;Aguarda 20ms
 		ldi andarPressionado, botao_externo_terreo ;Define o andar pressionado como 0
 		ldi tipoChamado, botaoExterno ;Define o local pressionado como externo
-		sbr regFila, filaTerreoExterno
+		sbr regFila, 1 << filaTerreoExterno
 		rjmp maquina_estados
 
 	botao_externo_andar1_pressed:
 		rcall debounce ;Aguarda 20ms
 		ldi andarPressionado, botao_externo_andar1 ;Define o andar pressionado como 1
 		ldi tipoChamado, botaoExterno ;Define o local pressionado como externo
-		sbr regFila, filaPrimeiroExterno
+		sbr regFila, 1 << filaPrimeiroExterno
 		rjmp maquina_estados
 	
 	botao_externo_andar2_pressed:
 		rcall debounce ;Aguarda 20ms
 		ldi andarPressionado, botao_externo_andar2 ;Define o andar pressionado como 2
 		ldi tipoChamado, botaoExterno ;Define o local pressionado como externo
-		sbr regFila, filaSegundoExterno
+		sbr regFila, 1 << filaSegundoExterno
 		rjmp maquina_estados
 	
 	botao_externo_andar3_pressed:
 		rcall debounce ;Aguarda 20ms
 		ldi andarPressionado, botao_externo_andar3 ;Define o andar pressionado como 3
 		ldi tipoChamado, botaoExterno ;Define o local pressionado como externo
-		sbr regFila, filaTerceiroExterno
+		sbr regFila, 1 << filaTerceiroExterno
 		rjmp maquina_estados
 
 	botao_abrir_pressed:
@@ -347,18 +347,8 @@ exec_parado:
 	cbi PORTD, led         ; Desliga o LED
 	cbi PORTD, buzzer      ; Desliga o Buzzer
 
-	;cpi filaVazia, 1 ;Verifica se a fila está vazia
-	;breq fim_parado ;Se sim, desvia para fim_parado
-
 	sbic PINC, botao_abrir  ; Verifica se o botao de abrir está pressionado
 	rjmp abrir_porta_inicio		 ; Se pressionado pula para abrir_porta_inicio
-
-	;cp andarAtual, andarDestino
-	;brne nao_esta_no_andar
-	;cpi var_chegou, 0 ;Verifica se chegou no andar
-	;breq fim_parado
-	;ldi state, abrir
-	;rjmp fim_parado
 
 	;nao_esta_no_andar:
 
@@ -369,10 +359,12 @@ exec_parado:
 
 	nao_chegou:
 
-	cpi tipoChamado, naoPressionado  ;Compara o tipoChamado com o valor de naoPressionado (0)
-	breq fim_parado                  ;Se tipoChamado == 0, desvia para fim_parado
+	cpi regFila, 0  				 ;Verifica se a fila esta vazia
+	breq fim_parado                  ;Se fila está vazia, desvia para fim_parado
 	ldi state, atualizaFila          ;Se tipoChamado != 0, define o estado como atualizaFila
-  rjmp fim_parado
+  	rjmp fim_parado
+    cpi tipoChamado, naoPressionado  ;Compara o tipoChamado com o valor de naoPressionado (0)
+	breq fim_parado                  ;Se tipoChamado == 0, desvia para fim_parado
 
 	abrir_porta_inicio:
 		call botao_abrir_pressed
@@ -411,12 +403,13 @@ exec_buzzerLigado:
 	rjmp t_fechar_porta2      ; Se pressionado pula para o fim
 
 	cpi tempoAguardando, 10  ; Compara tempoAguardando com 10
-	brge t_fechar_porta2		 ; Se tempoAguardando >= 10, desvia para t_fechar_porta2
+	brge t_acabou_tempo		 ; Se tempoAguardando >= 10, desvia para t_acabou_tempo
 	rjmp fim_b_ligado 		 	 ; Se tempoAguardando < 10, desvia para fim_b_ligado
 
 	t_fechar_porta2:
 		call botao_fechar_pressed
-		;ldi state, parado    ; Vai para o estado de parado
+	t_acabou_tempo:
+		ldi state, parado    ; Vai para o estado de parado
 	fim_b_ligado:
 	ret
 
@@ -448,7 +441,7 @@ exec_atualizaFila:
 			sbrc regFila, filaTerreoInterno ; Verifica se andar terreo interno foi pressionado, se não, pula
 			ldi andarDestino, terreo ; Se foi pressionado, andar terreo é o novo destino
 
-			rjmp desvio_final_atualiza_fila ; pula para desvio_final_atualiza_fila
+			rjmp verifica_fila ; pula para verifica_fila
 
 		testa_primeiro_parado:
 			cpi andarAtual, primeiro
@@ -473,7 +466,7 @@ exec_atualizaFila:
 				sbrc regFila, filaPrimeiroInterno ; Verifica se primeiro andar interno foi pressionado, se não, pula
 				ldi andarDestino, primeiro ; Se foi pressionado, primeiro andar é o novo destino
 
-				rjmp desvio_final_atualiza_fila ; pula para desvio_final_atualiza_fila
+				rjmp verifica_fila ; pula para verifica_fila
 
 		testa_segundo_parado:
 			cpi andarAtual, segundo
@@ -498,7 +491,7 @@ exec_atualizaFila:
 				sbrc regFila, filaSegundoInterno ; Verifica se segundo andar interno foi pressionado, se não, pula
 				ldi andarDestino, segundo ; Se foi pressionado, segundo andar é o novo destino
 
-				rjmp desvio_final_atualiza_fila ; pula para desvio_final_atualiza_fila
+				rjmp verifica_fila ; pula para verifica_fila
 
 		atual_terceiro_parado:
 			; se andarAtual = 3
@@ -520,7 +513,7 @@ exec_atualizaFila:
 			sbrc regFila, filaTerceiroInterno ; Verifica se terceiro andar interno foi pressionado, se não, pula
 			ldi andarDestino, terceiro ; Se foi pressionado, terceiro andar é o novo destino
 
-			rjmp desvio_final_atualiza_fila ; pula para desvio_final_atualiza_fila
+			rjmp verifica_fila ; pula para verifica_fila
 
 	atualiza_fila_nao_parado:
 		cpi sentido, subindo ; Verifica se o sentido é subindo
@@ -545,7 +538,7 @@ exec_atualizaFila:
 				sbrc regFila, filaPrimeiroInterno ; Verifica se primeiro andar interno foi pressionado, se não, pula
 				ldi andarDestino, primeiro ; Se foi pressionado, primeiro andar é o novo destino
 
-				rjmp desvio_final_atualiza_fila ; pula para desvio_final_atualiza_fila
+				rjmp verifica_fila ; pula para verifica_fila
 
 			testa_primeiro_subindo:
 				cpi andarAtual, primeiro
@@ -562,7 +555,7 @@ exec_atualizaFila:
 					sbrc regFila, filaSegundoInterno ; Verifica se segundo andar interno foi pressionado, se não, pula
 					ldi andarDestino, segundo ; Se foi pressionado, segundo andar é o novo destino
 
-					rjmp desvio_final_atualiza_fila ; pula para desvio_final_atualiza_fila
+					rjmp verifica_fila ; pula para verifica_fila
 
 			testa_segundo_subindo:
 				cpi andarAtual, segundo
@@ -575,11 +568,11 @@ exec_atualizaFila:
 					sbrc regFila, filaTerceiroInterno ; Verifica se terceiro andar interno foi pressionado, se não, pula
 					ldi andarDestino, terceiro ; Se foi pressionado, terceiro andar é o novo destino
 
-					rjmp desvio_final_atualiza_fila ; pula para desvio_final_atualiza_fila
+					rjmp verifica_fila ; pula para verifica_fila
 
 			atual_terceiro_subindo:
 				; se andarAtual = 3
-				rjmp desvio_final_atualiza_fila ; pula para desvio_final_atualiza_fila
+				rjmp verifica_fila ; pula para verifica_fila
 
 		atualiza_fila_descendo: 
 			; Operações para fila descendo
@@ -587,7 +580,7 @@ exec_atualizaFila:
 			brne testa_primeiro_descendo
 			atual_terreo_descendo:
 			; se andarAtual = terreo
-				rjmp desvio_final_atualiza_fila ; pula para desvio_final_atualiza_fila
+				rjmp verifica_fila ; pula para verifica_fila
 
 			testa_primeiro_descendo:
 				cpi andarAtual, primeiro
@@ -600,7 +593,7 @@ exec_atualizaFila:
 					sbrc regFila, filaTerreoInterno ; Verifica se andar terreo interno foi pressionado, se não, pula
 					ldi andarDestino, terreo ; Se foi pressionado, andar terreo é o novo destino
 
-					rjmp desvio_final_atualiza_fila ; pula para desvio_final_atualiza_fila
+					rjmp verifica_fila ; pula para verifica_fila
 
 			testa_segundo_descendo:
 				cpi andarAtual, segundo
@@ -619,7 +612,7 @@ exec_atualizaFila:
 					sbrc regFila, filaPrimeiroInterno ; Verifica se primeiro andar interno foi pressionado, se não, pula
 					ldi andarDestino, primeiro ; Se foi pressionado, primeiro andar é o novo destino
 
-					rjmp desvio_final_atualiza_fila ; pula para desvio_final_atualiza_fila
+					rjmp verifica_fila ; pula para verifica_fila
 
 			atual_terceiro_descendo:
 				; se andarAtual = 3
@@ -629,22 +622,22 @@ exec_atualizaFila:
 				sbrc regFila, filaTerreoInterno ; Verifica se andar terreo interno foi pressionado, se não, pula
 				ldi andarDestino, terreo ; Se foi pressionado, andar terreo é o novo destino
 
-				sbrc regFila, filaSegundoExterno ; Verifica se segundo andar externo foi pressionado, se não, pula
-				ldi andarDestino, segundo ; Se foi pressionado, segundo andar é o novo destino
-
-				sbrc regFila, filaSegundoInterno ; Verifica se segundo andar interno foi pressionado, se não, pula
-				ldi andarDestino, segundo ; Se foi pressionado, segundo andar é o novo destino
-
 				sbrc regFila, filaPrimeiroExterno ; Verifica se primeiro andar externo foi pressionado, se não, pula
 				ldi andarDestino, primeiro ; Se foi pressionado, primeiro andar é o novo destino
 
 				sbrc regFila, filaPrimeiroInterno ; Verifica se primeiro andar interno foi pressionado, se não, pula
 				ldi andarDestino, primeiro ; Se foi pressionado, primeiro andar é o novo destino
 
-				rjmp desvio_final_atualiza_fila ; pula para desvio_final_atualiza_fila
+				sbrc regFila, filaSegundoExterno ; Verifica se segundo andar externo foi pressionado, se não, pula
+				ldi andarDestino, segundo ; Se foi pressionado, segundo andar é o novo destino
 
-	desvio_final_atualiza_fila:
-		;; Precisa dar clear no tipoChamado
+				sbrc regFila, filaSegundoInterno ; Verifica se segundo andar interno foi pressionado, se não, pula
+				ldi andarDestino, segundo ; Se foi pressionado, segundo andar é o novo destino
+
+				rjmp verifica_fila ; pula para verifica_fila
+
+	verifica_fila:
+		; Precisa dar clear no tipoChamado
 		clr tipoChamado
 
 	cpi var_chegou, 1
@@ -749,25 +742,26 @@ exec_chegou:
 	testa_terreo_chegou:
 		cpi andarDestino, terreo
 		brne testa_primeiro_chegou
-		cbr regFila, filaTerreoExterno ; Limpa bit do terreo externo
-		cbr regFila, filaTerreoInterno ; Limpa bit do terreo interno
+		cbr regFila, 1 << filaTerreoExterno ; Limpa bit do terreo externo
+		cbr regFila, 1 << filaTerreoInterno ; Limpa bit do terreo interno
 		rjmp chegou_final
 	testa_primeiro_chegou:
 		cpi andarDestino, primeiro
 		brne testa_segundo_chegou
-		cbr regFila, filaPrimeiroExterno ; Limpa bit do primeiro andar externo
-		cbr regFila, filaPrimeiroInterno ; Limpa bit do primeiro andar interno
+		cbr regFila, 1 << filaPrimeiroExterno ; Limpa bit do primeiro andar externo
+		cbr regFila, 1 << filaPrimeiroInterno ; Limpa bit do primeiro andar interno
 		rjmp chegou_final
 	testa_segundo_chegou:
 		cpi andarDestino, segundo
 		brne testa_terceiro_chegou
-		cbr regFila, filaSegundoExterno ; Limpa bit do segundo andar externo
-		cbr regFila, filaSegundoInterno ; Limpa bit do segundo andar interno
+		cbr regFila, 1 << filaSegundoExterno ; Limpa bit do segundo andar externo
+		cbr regFila, 1 << filaSegundoInterno ; Limpa bit do segundo andar interno
 		rjmp chegou_final
 	testa_terceiro_chegou:
 		cpi andarDestino, terceiro
-		cbr regFila, filaTerceiroExterno ; Limpa bit do terceiro andar externo
-		cbr regFila, filaTerceiroInterno ; Limpa bit do terceiro andar interno
+		brne chegou_final
+		cbr regFila, 1 << filaTerceiroExterno ; Limpa bit do terceiro andar externo
+		cbr regFila, 1 << filaTerceiroInterno ; Limpa bit do terceiro andar interno
 	
 	chegou_final:
 	ldi state, atualizaFila ;Define o estado como atualizaFila
