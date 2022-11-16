@@ -382,7 +382,7 @@ exec_abrir:
 	rjmp t_fechar_porta        ;
 	
 	cpi tempoAguardando, 5   ; Compara tempoAguardando com 5
-	brne t_final_abrir       ; Se tempoAguardando != 5, desvia para t_final_abrir
+	brlt t_final_abrir       ; Se tempoAguardando != 5, desvia para t_final_abrir
 	ldi state, buzzerLigado  ; Se TempoAguardando == 5, seta o estado para buzzerLigado
 	rjmp t_final_abrir       ; Desvia para t_final_abrir
 	
