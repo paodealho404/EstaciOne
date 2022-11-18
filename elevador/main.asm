@@ -382,7 +382,7 @@ exec_abrir:
 	rjmp t_fechar_porta        ;
 	
 	cpi tempoAguardando, 5   ; Compara tempoAguardando com 5
-	brne t_final_abrir       ; Se tempoAguardando != 5, desvia para t_final_abrir
+	brlt t_final_abrir       ; Se tempoAguardando != 5, desvia para t_final_abrir
 	ldi state, buzzerLigado  ; Se TempoAguardando == 5, seta o estado para buzzerLigado
 	rjmp t_final_abrir       ; Desvia para t_final_abrir
 	
@@ -676,14 +676,14 @@ exec_movendoCima:
 	brne movendo_cima_chamada						; Se tipoChamado != 0, pula para movendo_cima_chamada
 
 	cpi tempoAguardando, 3 ; Compara tempoAguardando com 3
-	brlt nao_subiu         ; Se tempoAguardando < 3 desvia para nao_subiu
+	brlt fim_movendo_cima         ; Se tempoAguardando < 3 desvia para fim_movendo_cima
 	ldi state, trocaAndar  ; Se tempoAguardando >= 3 define o estado como trocaAndar
-	rjmp nao_subiu
+	rjmp fim_movendo_cima
 
 	movendo_cima_chamada:
 		ldi state, atualizaFila
 
-	nao_subiu:
+	fim_movendo_cima:
 	
 	ret
 
@@ -696,14 +696,14 @@ exec_movendoBaixo:
 	brne movendo_baixo_chamada						; Se tipoChamado != 0, pula para movendo_baixo_chamada
 
 	cpi tempoAguardando, 3 ; Compara tempoAguardando com 3
-	brlt nao_desceu        ; Se tempoAguardando < 3 desvia para nao_subiu
+	brlt fim_movendo_baixo        ; Se tempoAguardando < 3 desvia para fim_movendo_baixo
 	ldi state, trocaAndar  ; Se tempoAguardando >= 3 define o estado como trocaAndar
-	rjmp nao_desceu
+	rjmp fim_movendo_baixo
 	
 	movendo_baixo_chamada:
 		ldi state, atualizaFila
 
-	nao_desceu:
+	fim_movendo_baixo:
 
 	ret
 
