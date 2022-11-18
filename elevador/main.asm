@@ -1,4 +1,4 @@
-.cseg
+.cseg 
 jmp setup
 .org OC1Aaddr
 jmp timer_1_sec_interrupt
@@ -6,14 +6,14 @@ jmp timer_1_sec_interrupt
 setup:
 	.def temp = r16 ;Define o nome 'temp' para o registrador r16
 	ldi temp, 0b00000000 ;Carrega em temp 00000000
-	out DDRB, temp 
+	out DDRB, temp ; Configura a porta B como entrada (botões)
 
 	ldi temp, 0b11111100 ;Carrega em temp 11111100
 	out DDRD, temp ;Configura PORTD7 e PORTD6 como saída usadas pelo led e buzzer. 
 	;Configura PORTD5, PORTD4, PORTD3 e PORTD2 como saída usadas pelo CI
 
 	ldi temp, 0b00000000 ;Carrega em temp 00000000
-	out DDRC, temp ;Na porta C terá apenas botões
+	out DDRC, temp ; Configura a porta C como entrada (botões)
 
 	ldi temp, 0b00001111;Carrega 00001111 em temp
 	out PORTB, temp ;inicializa as portas PB4 (Buzzer) e PB3 (Led) em LOW, e habilita pull-up em PB3, PB2, PB1 e PB0
@@ -103,13 +103,12 @@ setup:
 	ldi andarAtual, terreo ;Define o andar atual para 0
 
 	.def andarDestino = r19 ;Define o nome 'andarDestino' para o registrador r19
-	.def andarPressionado = r20 ;Define o nome 'andarPressionado' para o registrador r20
-	.def tipoChamado = r21 ;Define o nome 'tipoChamado' para o registrador r21, 1 para interno e 2 para externo
-	.def tempoAguardando = r22 ;Define o nome 'tempoAguardando' para o registrador r22
-	.def sentido = r23 ;Define o nome 'sentido' para o registrador r23, 1 para cima e 0 para baixo
-	.def estaParado = r24 ;Define o nome 'estaParado' para o registrador r24
-	.def var_chegou = r25 ;Define o nome 'var_chegou' para o registrador r25, 1 para chegou e 0 para não 
-	.def regFila = r26 ;Define o nome 'regFila' para o registrador r26 (regFila = 0bTeTi1e1i2e2i3e3i)
+	.def tipoChamado = r20 ;Define o nome 'tipoChamado' para o registrador r20, 1 para interno e 2 para externo
+	.def tempoAguardando = r21 ;Define o nome 'tempoAguardando' para o registrador r21
+	.def sentido = r22 ;Define o nome 'sentido' para o registrador r22, 1 para cima e 0 para baixo
+	.def estaParado = r23 ;Define o nome 'estaParado' para o registrador r23
+	.def var_chegou = r24 ;Define o nome 'var_chegou' para o registrador r24, 1 para chegou e 0 para não 
+	.def regFila = r25 ;Define o nome 'regFila' para o registrador r25 (regFila = 0bTeTi1e1i2e2i3e3i)
 
 	.equ ClockMHz = 16 ;16MHz
 	.equ DelayMs = 20 ;20ms
@@ -142,9 +141,9 @@ timer_1_sec_interrupt:
 	in r16, SREG
 	push r16
 	
-	cpi state, parado								;Compara o estado com o estado parado
-	breq timer_1_sec_interrupt_end  ;Se state == parado, não incrementa o tempoAguardando
-	inc tempoAguardando
+	cpi state, parado				;Compara o estado com o estado parado
+	breq timer_1_sec_interrupt_end  ;Se state == parado, não incrementa o tempoAguardando e pula para o final da interrupção
+	inc tempoAguardando             ;Se state != parado, incrementa o tempoAguardando
 	 
 
 	timer_1_sec_interrupt_end:	
@@ -152,9 +151,8 @@ timer_1_sec_interrupt:
 		out SREG, r16
 		pop r16
 	
-
-	sei
-	reti
+	sei ; Seta a flag global de interrupção
+	reti ; Retorna da interrupção
 
 debounce:
 	ldi r31, byte3(ClockMHz * 1000 * DelayMs / 5)
@@ -169,7 +167,7 @@ debounce:
 	ret
 
 loop:
-	sei
+	sei ; Seta a flag global de interrupções
 	sbic PINC, botao_interno_terreo ;Se o botão interno do térreo for pressionado
 	rjmp botao_interno_terreo_pressed ;Pula para a rotina botao_interno_terreo_pressed
 
@@ -194,68 +192,54 @@ loop:
 	sbic PINB, botao_externo_andar3 ;Se o botão externo do terceiro andar for pressionado
 	rjmp botao_externo_andar3_pressed ;Pula para a rotina botao_externo_andar3_pressed
 
-	;sbic PINC, botao_abrir ;Se o botão de abrir for pressionado
-	;rjmp botao_abrir_pressed ; Pula para a rotina botao_abrir_pressed
-
-	;sbic PINC, botao_fechar ;Se o botão de fechar for pressionado
-	;rjmp botao_fechar_pressed ; Pula para a rotina botao_fechar_pressed
-
-	rjmp maquina_estados
+	rjmp maquina_estados ; Pula para 'maquina de estados'
 
 	botao_interno_terreo_pressed:
 		rcall debounce ;Aguarda 20ms
-		ldi andarPressionado, botao_interno_terreo ;Define o andar pressionado como 0
 		ldi tipoChamado, botaoInterno ;Define o local pressionado como interno
-		sbr regFila, 1 << filaTerreoInterno
+		sbr regFila, 1 << filaTerreoInterno ; Seta o bit relacionado a filaTerreoInterno (6), como 1 (regFila = 0bx1xxxxxx)
 		rjmp maquina_estados
 
 	botao_interno_andar1_pressed:
 		rcall debounce ;Aguarda 20ms
-		ldi andarPressionado, botao_interno_andar1 ;Define o andar pressionado como 1
 		ldi tipoChamado, botaoInterno ;Define o local pressionado como interno
-		sbr regFila, 1 << filaPrimeiroInterno
+		sbr regFila, 1 << filaPrimeiroInterno ; Seta o bit relacionado a filaPrimeiroInterno (4) como 1 (regFila = 0bxxx1xxxx)
 		rjmp maquina_estados
 
 	botao_interno_andar2_pressed:
 		rcall debounce ;Aguarda 20ms
-		ldi andarPressionado, botao_interno_andar2 ;Define o andar pressionado como 2
 		ldi tipoChamado, botaoInterno ;Define o local pressionado como interno
-		sbr regFila, 1 << filaSegundoInterno
+		sbr regFila, 1 << filaSegundoInterno ; Seta o bit relacionado a filaSegundoInterno (2) como 1 (regFila = 0bxxxxx1xx)
 		rjmp maquina_estados
 
 	botao_interno_andar3_pressed:
 		rcall debounce ;Aguarda 20ms
-		ldi andarPressionado, botao_interno_andar3 ;Define o andar pressionado como 3
 		ldi tipoChamado, botaoInterno ;Define o local pressionado como interno
-		sbr regFila, 1 << filaTerceiroInterno
+		sbr regFila, 1 << filaTerceiroInterno ; Seta o bit relacionado a filaTerceiroInterno (0) como 1 (regFila = 0bxxxxxxx1)
 		rjmp maquina_estados
 
 	botao_externo_terreo_pressed:
 		rcall debounce ;Aguarda 20ms
-		ldi andarPressionado, botao_externo_terreo ;Define o andar pressionado como 0
 		ldi tipoChamado, botaoExterno ;Define o local pressionado como externo
-		sbr regFila, 1 << filaTerreoExterno
+		sbr regFila, 1 << filaTerreoExterno ; Seta o bit relacionado a filaTerreoExterno (7) como 1 (regFila = 0b1xxxxxxx)
 		rjmp maquina_estados
 
 	botao_externo_andar1_pressed:
 		rcall debounce ;Aguarda 20ms
-		ldi andarPressionado, botao_externo_andar1 ;Define o andar pressionado como 1
 		ldi tipoChamado, botaoExterno ;Define o local pressionado como externo
-		sbr regFila, 1 << filaPrimeiroExterno
+		sbr regFila, 1 << filaPrimeiroExterno ; Seta o bit relacionado a filaPrimeiroExterno (5) como 1 (regFila = 0bxx1xxxxx)
 		rjmp maquina_estados
 	
 	botao_externo_andar2_pressed:
 		rcall debounce ;Aguarda 20ms
-		ldi andarPressionado, botao_externo_andar2 ;Define o andar pressionado como 2
 		ldi tipoChamado, botaoExterno ;Define o local pressionado como externo
-		sbr regFila, 1 << filaSegundoExterno
+		sbr regFila, 1 << filaSegundoExterno ; Seta o bit relacionado a filaSegundoExterno (3) como 1 (regFila = 0bxxxxx1xx)
 		rjmp maquina_estados
 	
-	botao_externo_andar3_pressed:
+	botao_externo_andar3_pressed0,,,,,,,,,,,,,,,,,,:
 		rcall debounce ;Aguarda 20ms
-		ldi andarPressionado, botao_externo_andar3 ;Define o andar pressionado como 3
 		ldi tipoChamado, botaoExterno ;Define o local pressionado como externo
-		sbr regFila, 1 << filaTerceiroExterno
+		sbr regFila, 1 << filaTerceiroExterno ; Seta o bit relacionado a filaTerceiroExterno (1) como 1 (regFila = 0bxxxxxx1x)
 		rjmp maquina_estados
 
 	botao_abrir_pressed:
@@ -298,9 +282,6 @@ loop:
 		cpi state, chegou
 		breq case_chegou
 
-		;sbic PINC, PC0 ;botão solto? ;sbic = skip if bit in I/O register cleared
-		;rjmp led_on ;Não, desvia para ligar LED
-		;cbi PORTB, PB4 ;Sim ,desliga LED ;cbi = clear bit in I/O register
 		rjmp loop ;Volta ao começo do loop
 
 case_inicio:
@@ -331,26 +312,21 @@ case_chegou:
 	call exec_chegou
 	jmp loop
 
-
-
 exec_inicio:
 	ldi state, parado       ; Transição do estado para parado
 	ldi andarAtual, 0		; Inicia o andarAtual como 0
-	ldi tipoChamado, naoPressionado
-	clr andarPressionado	; Inicia o andarPressionado como 0
+	ldi tipoChamado, naoPressionado ; tipoChamado = naoPressionado
 	clr regFila             ; Inicia a fila vazia
 	ret
 
 exec_parado:
-	ldi estaParado, 1
+	ldi estaParado, 1      ; estaParado = 1
 	clr tempoAguardando    ; O contador de tempoAguardando é zerado
 	cbi PORTD, led         ; Desliga o LED
 	cbi PORTD, buzzer      ; Desliga o Buzzer
 
 	sbic PINC, botao_abrir  ; Verifica se o botao de abrir está pressionado
 	rjmp abrir_porta_inicio		 ; Se pressionado pula para abrir_porta_inicio
-
-	;nao_esta_no_andar:
 
 	cpi var_chegou, 1 ;Verifica se chegou no andar
 	brne nao_chegou ; Se chegou != 1, desvia para nao_chegou
@@ -360,14 +336,12 @@ exec_parado:
 	nao_chegou:
 
 	cpi regFila, 0  				 ;Verifica se a fila esta vazia
-	breq fim_parado                  ;Se fila está vazia, desvia para fim_parado
-	ldi state, atualizaFila          ;Se tipoChamado != 0, define o estado como atualizaFila
-  	rjmp fim_parado
-    cpi tipoChamado, naoPressionado  ;Compara o tipoChamado com o valor de naoPressionado (0)
-	breq fim_parado                  ;Se tipoChamado == 0, desvia para fim_parado
+	breq fim_parado                  ;Se fila == 0, está vazia, desvia para fim_parado
+	ldi state, atualizaFila          ;Se fila != 0, state = atualizaFila Se tipoChamado != 0, define o estado como atualizaFila
+	rjmp fim_parado                  ;Após setar o state vai para o final
 
-	abrir_porta_inicio:
-		call botao_abrir_pressed
+	abrir_porta_inicio:						
+		call botao_abrir_pressed  ; chama a função de abrir a porta se o botão abrir for pressionado
 
 	fim_parado:
 
@@ -378,17 +352,16 @@ exec_abrir:
 	sbi PORTD, led 				; Liga Led 
 	ldi var_chegou, 0 			; Define var_chegou como 0
 
-	sbic PINC, botao_fechar	; Verifica se o botao de abrir está pressionado
-	rjmp t_fechar_porta        ;
+	sbic PINC, botao_fechar	; Verifica se o botao de fechar está pressionado
+	rjmp t_fechar_porta     ; Se sim, pula para t_fechar_porta
 	
 	cpi tempoAguardando, 5   ; Compara tempoAguardando com 5
-	brlt t_final_abrir       ; Se tempoAguardando != 5, desvia para t_final_abrir
-	ldi state, buzzerLigado  ; Se TempoAguardando == 5, seta o estado para buzzerLigado
+	brlt t_final_abrir       ; Se tempoAguardando < 5, desvia para t_final_abrir
+	ldi state, buzzerLigado  ; Se TempoAguardando >= 5, seta o estado para buzzerLigado
 	rjmp t_final_abrir       ; Desvia para t_final_abrir
 	
 	t_fechar_porta:
-		call botao_fechar_pressed
-		;ldi state, parado
+		call botao_fechar_pressed ;chama a função de fechar a porta se o botão fechar for pressionado
 
 	t_final_abrir:
 	ret
@@ -400,14 +373,14 @@ exec_buzzerLigado:
 	rjmp fim_b_ligado		 ; Se pressionado pula para o fim
 	
 	sbic PINC, botao_fechar ; Verifica se o botao de fechar está pressionado
-	rjmp t_fechar_porta2      ; Se pressionado pula para o fim
+	rjmp t_fechar_porta2      ; pula para t_fechar_porta2
 
 	cpi tempoAguardando, 10  ; Compara tempoAguardando com 10
 	brge t_acabou_tempo		 ; Se tempoAguardando >= 10, desvia para t_acabou_tempo
 	rjmp fim_b_ligado 		 	 ; Se tempoAguardando < 10, desvia para fim_b_ligado
 
 	t_fechar_porta2:
-		call botao_fechar_pressed
+		call botao_fechar_pressed ;chama a função de fechar a porta se o botão fechar for pressionado
 	t_acabou_tempo:
 		ldi state, parado    ; Vai para o estado de parado
 	fim_b_ligado:
@@ -415,38 +388,39 @@ exec_buzzerLigado:
 
 exec_atualizaFila:
 	cpi estaParado, 1 ; Verifica se o elevador está parado
-	breq atualiza_fila_parado ; Se sentido não for subindo desvia para atualiza_fila_descendo
-	rjmp atualiza_fila_nao_parado
+	breq atualiza_fila_parado ;Se estaParado == 1, desvia para atualiza_fila_parado
+	rjmp atualiza_fila_nao_parado ;Se estaParado != 1, desvia para atualiza_fila_nao_parado
 	atualiza_fila_parado:
 		; Operações para fila parado
-		cpi andarAtual, terreo
-		brne testa_primeiro_parado
-		atual_terreo_parado:
-		; se andarAtual = terreo
-			sbrc regFila, filaTerceiroExterno ; Verifica se terceiro andar externo foi pressionado, se não, pula
-			ldi andarDestino, terceiro ; Se foi pressionado, terceiro andar é o novo destino
-			sbrc regFila, filaSegundoExterno ; Verifica se segundo andar externo foi pressionado, se não, pula
-			ldi andarDestino, segundo ; Se foi pressionado, segundo andar é o novo destino
-			sbrc regFila, filaPrimeiroExterno ; Verifica se primeiro andar externo foi pressionado, se não, pula
-			ldi andarDestino, primeiro ; Se foi pressionado, primeiro andar é o novo destino
-			sbrc regFila, filaTerreoExterno ; Verifica se andar terreo externo foi pressionado, se não, pula
-			ldi andarDestino, terreo ; Se foi pressionado, andar terreo é o novo destino
+		testa_terreo_parado:
+			cpi andarAtual, terreo  ; Verifica andarAtual com terreo (0)
+			brne testa_primeiro_parado ; Se andarAtual != 0, pula para testa_primeiro_parado
+			atual_terreo_parado:       ; Se andarAtual == 0, executa atual_terreo_parado
+			; se andarAtual = terreo
+				sbrc regFila, filaTerceiroExterno ; Verifica o bit 1 (filaTerceiroExterno), se regFila[1] == 0, pula a próxima instrução
+				ldi andarDestino, terceiro ; Se regFila[1] == 1, terceiro andar é o novo destino
+				sbrc regFila, filaSegundoExterno ; Verifica o bit 3 (filaSegundoExterno), se regFila[3] == 0, pula a próxima instrução
+				ldi andarDestino, segundo ; Se regFila[3] == 1, segunda andar é o novo destino
+				sbrc regFila, filaPrimeiroExterno ; Verifica o bit 5 (filaPrimeiroExterno), se regFila[5] == 0, pula a próxima instrução
+				ldi andarDestino, primeiro ; Se regFila[5] == 1, primeiro andar é o novo destino
+				sbrc regFila, filaTerreoExterno ; erifica o bit 7 (filaTerreoExterno), se regFila[7] == 0, pula a próxima instrução
+				ldi andarDestino, terreo ; Se regFila[5] == 1, terreo é o novo destino
 
-			sbrc regFila, filaTerceiroInterno ; Verifica se terceiro andar interno foi pressionado, se não, pula
-			ldi andarDestino, terceiro ; Se foi pressionado, terceiro andar é o novo destino
-			sbrc regFila, filaSegundoInterno ; Verifica se segundo andar interno foi pressionado, se não, pula
-			ldi andarDestino, segundo ; Se foi pressionado, segundo andar é o novo destino
-			sbrc regFila, filaPrimeiroInterno ; Verifica se primeiro andar interno foi pressionado, se não, pula
-			ldi andarDestino, primeiro ; Se foi pressionado, primeiro andar é o novo destino
-			sbrc regFila, filaTerreoInterno ; Verifica se andar terreo interno foi pressionado, se não, pula
-			ldi andarDestino, terreo ; Se foi pressionado, andar terreo é o novo destino
+				sbrc regFila, filaTerceiroInterno ; Verifica o bit 0 (filaTerceiroInterno), se regFila[0] == 0, pula a próxima instrução
+				ldi andarDestino, terceiro ; Se regFila[0] == 1, terceiro andar é o novo destino
+				sbrc regFila, filaSegundoInterno ; Verifica o bit 2 (filaSegundoInterno), se regFila[2] == 0, pula a próxima instrução
+				ldi andarDestino, segundo ; Se regFila[2] == 1, segunda andar é o novo destino
+				sbrc regFila, filaPrimeiroInterno ; Verifica o bit 4 (filaPrimeiroInterno), se regFila[4] == 0, pula a próxima instrução
+				ldi andarDestino, primeiro ; Se regFila[4] == 1, primeiro andar é o novo destino
+				sbrc regFila, filaTerreoInterno ; Verifica o bit 6 (filaPrimeiroInterno), se regFila[6] == 0, pula a próxima instrução
+				ldi andarDestino, terreo ; Se regFila[6] == 1, terreo é o novo destino
 
-			rjmp verifica_fila ; pula para verifica_fila
+				rjmp verifica_fila ; pula para verifica_fila
 
 		testa_primeiro_parado:
-			cpi andarAtual, primeiro
-			brne testa_segundo_parado
-			atual_primeiro_parado:
+			cpi andarAtual, primeiro ; Verifica andarAtual com primeiro (1)
+			brne testa_segundo_parado ; se andarAndarAtual != 1, pula para testa_segundo_parado
+			atual_primeiro_parado:    ; Se andarAtual == 1, executa atual_primeiro_parado
 			; se andarAtual = 1
 				sbrc regFila, filaTerreoExterno ; Verifica se andar terreo externo foi pressionado, se não, pula
 				ldi andarDestino, terreo ; Se foi pressionado, andar terreo é o novo destino
@@ -469,9 +443,9 @@ exec_atualizaFila:
 				rjmp verifica_fila ; pula para verifica_fila
 
 		testa_segundo_parado:
-			cpi andarAtual, segundo
-			brne atual_terceiro_parado
-			atual_segundo_parado:
+			cpi andarAtual, segundo ; Verifica andarAtual com segundo (2)
+			brne atual_terceiro_parado ; Se andarAtual != 2, pula para atual_terceiro_parado
+			atual_segundo_parado:      ; Se andarAtual == 2, executa atual_segundo_parado
 			; se andarAtual = 2
 				sbrc regFila, filaTerreoExterno ; Verifica se andar terreo externo foi pressionado, se não, pula
 				ldi andarDestino, terreo ; Se foi pressionado, andar terreo é o novo destino
@@ -482,19 +456,19 @@ exec_atualizaFila:
 				sbrc regFila, filaSegundoExterno ; Verifica se segundo andar externo foi pressionado, se não, pula
 				ldi andarDestino, segundo ; Se foi pressionado, segundo andar é o novo destino
 
-				sbrc regFila, filaTerreoInterno ; Verifica se andar terreo interno foi pressionado, se não, pula
-				ldi andarDestino, terreo ; Se foi pressionado, andar terreo é o novo destino
-				sbrc regFila, filaPrimeiroInterno ; Verifica se primeiro andar interno foi pressionado, se não, pula
-				ldi andarDestino, primeiro ; Se foi pressionado, primeiro andar é o novo destino
 				sbrc regFila, filaTerceiroInterno ; Verifica se terceiro andar interno foi pressionado, se não, pula
 				ldi andarDestino, terceiro ; Se foi pressionado, terceiro andar é o novo destino
+				sbrc regFila, filaPrimeiroInterno ; Verifica se primeiro andar interno foi pressionado, se não, pula
+				ldi andarDestino, primeiro ; Se foi pressionado, primeiro andar é o novo destino
+				sbrc regFila, filaTerreoInterno ; Verifica se andar terreo interno foi pressionado, se não, pula
+				ldi andarDestino, terreo ; Se foi pressionado, andar terreo é o novo destino
 				sbrc regFila, filaSegundoInterno ; Verifica se segundo andar interno foi pressionado, se não, pula
 				ldi andarDestino, segundo ; Se foi pressionado, segundo andar é o novo destino
 
 				rjmp verifica_fila ; pula para verifica_fila
 
+		; Se andarAtual == 3, executa atual_terceiro_par
 		atual_terceiro_parado:
-			; se andarAtual = 3
 			sbrc regFila, filaTerreoExterno ; Verifica se andar terreo externo foi pressionado, se não, pula
 			ldi andarDestino, terreo ; Se foi pressionado, andar terreo é o novo destino
 			sbrc regFila, filaPrimeiroExterno ; Verifica se primeiro andar externo foi pressionado, se não, pula
@@ -515,35 +489,36 @@ exec_atualizaFila:
 
 			rjmp verifica_fila ; pula para verifica_fila
 
-	atualiza_fila_nao_parado:
+	atualiza_fila_nao_parado: ; Caso o elevador esteja em movimento e ocorreu uma nova chamada
 		cpi sentido, subindo ; Verifica se o sentido é subindo
-		brne atualiza_fila_descendo ; Se sentido não for subindo desvia para atualiza_fila_descendo
-		atualiza_fila_subindo:
+		brne atualiza_fila_descendo ; Se sentido != 1 (subindo), pula para atualiza_fila_descendo
+		atualiza_fila_subindo:      ; Se sentido == 1 (subindo), executa atualiza_fila_subindo
 			; Operações para fila subindo
-			cpi andarAtual, terreo
-			brne testa_primeiro_subindo
-			atual_terreo_subindo:
-			; se andarAtual = terreo
-				sbrc regFila, filaPrimeiroExterno ; Verifica se primeiro andar externo foi pressionado, se não, pula
-				ldi andarDestino, primeiro ; Se foi pressionado, primeiro andar é o novo destino
-				sbrc regFila, filaSegundoExterno ; Verifica se segundo andar externo foi pressionado, se não, pula
-				ldi andarDestino, segundo ; Se foi pressionado, segundo andar é o novo destino
-				sbrc regFila, filaTerceiroExterno ; Verifica se terceiro andar externo foi pressionado, se não, pula
-				ldi andarDestino, terceiro ; Se foi pressionado, terceiro andar é o novo destino
+			testa_terreo_subindo:
+			cpi andarAtual, terreo ; Verifica andarAtual com terreo (0)
+			brne testa_primeiro_subindo ; Se andarAtual != 0, pula para testa_primeiro_subindo
+				atual_terreo_subindo:     ; Se andarAtual == 0, executa atual_terreo_subindo
+				; se andarAtual = terreo
+					sbrc regFila, filaPrimeiroExterno ; Verifica se primeiro andar externo foi pressionado, se não, pula
+					ldi andarDestino, primeiro ; Se foi pressionado, primeiro andar é o novo destino
+					sbrc regFila, filaSegundoExterno ; Verifica se segundo andar externo foi pressionado, se não, pula
+					ldi andarDestino, segundo ; Se foi pressionado, segundo andar é o novo destino
+					sbrc regFila, filaTerceiroExterno ; Verifica se terceiro andar externo foi pressionado, se não, pula
+					ldi andarDestino, terceiro ; Se foi pressionado, terceiro andar é o novo destino
 
-				sbrc regFila, filaTerceiroInterno ; Verifica se terceiro andar interno foi pressionado, se não, pula
-				ldi andarDestino, terceiro ; Se foi pressionado, terceiro andar é o novo destino
-				sbrc regFila, filaSegundoInterno ; Verifica se segundo andar interno foi pressionado, se não, pula
-				ldi andarDestino, segundo ; Se foi pressionado, segundo andar é o novo destino
-				sbrc regFila, filaPrimeiroInterno ; Verifica se primeiro andar interno foi pressionado, se não, pula
-				ldi andarDestino, primeiro ; Se foi pressionado, primeiro andar é o novo destino
+					sbrc regFila, filaTerceiroInterno ; Verifica se terceiro andar interno foi pressionado, se não, pula
+					ldi andarDestino, terceiro ; Se foi pressionado, terceiro andar é o novo destino
+					sbrc regFila, filaSegundoInterno ; Verifica se segundo andar interno foi pressionado, se não, pula
+					ldi andarDestino, segundo ; Se foi pressionado, segundo andar é o novo destino
+					sbrc regFila, filaPrimeiroInterno ; Verifica se primeiro andar interno foi pressionado, se não, pula
+					ldi andarDestino, primeiro ; Se foi pressionado, primeiro andar é o novo destino
 
-				rjmp verifica_fila ; pula para verifica_fila
+					rjmp verifica_fila ; pula para verifica_fila
 
 			testa_primeiro_subindo:
-				cpi andarAtual, primeiro
-				brne testa_segundo_subindo
-				atual_primeiro_subindo:
+				cpi andarAtual, primeiro ; Verifica andar atual com primeiro (1)
+				brne testa_segundo_subindo ; Se andarAtual != 1, pula para testa_segundo_subindo
+				atual_primeiro_subindo:		 ; Se andarAtual == 1, executa atual_primeiro_subindo
 				; se andarAtual = 1
 					sbrc regFila, filaSegundoExterno ; Verifica se segundo andar externo foi pressionado, se não, pula
 					ldi andarDestino, segundo ; Se foi pressionado, segundo andar é o novo destino
@@ -558,9 +533,9 @@ exec_atualizaFila:
 					rjmp verifica_fila ; pula para verifica_fila
 
 			testa_segundo_subindo:
-				cpi andarAtual, segundo
-				brne atual_terceiro_subindo
-				atual_segundo_subindo:
+				cpi andarAtual, segundo ; Verifica andarAtual cundo (2)o
+				brne atual_terceiro_subindo ; Se andarAtual != 2, pula para atual_terceiro 
+				atual_segundo_subindo:      ; Se andarAtual == 2, executa atual_segundo_subindo
 				; se andarAtual = 2
 					sbrc regFila, filaTerceiroExterno ; Verifica se terceiro andar externo foi pressionado, se não, pula
 					ldi andarDestino, terceiro ; Se foi pressionado, terceiro andar é o novo destino
@@ -570,22 +545,23 @@ exec_atualizaFila:
 
 					rjmp verifica_fila ; pula para verifica_fila
 
+			; Se andarAtual == 3
 			atual_terceiro_subindo:
-				; se andarAtual = 3
 				rjmp verifica_fila ; pula para verifica_fila
 
 		atualiza_fila_descendo: 
 			; Operações para fila descendo
-			cpi andarAtual, terreo
-			brne testa_primeiro_descendo
-			atual_terreo_descendo:
-			; se andarAtual = terreo
-				rjmp verifica_fila ; pula para verifica_fila
+			testa_terreo_descendo:
+				cpi andarAtual, terreo ; Verifica andarAtual com terreo
+				brne testa_primeiro_descendo ; Se andarAtual != 0, pula para testa_primeiro_descendo
+				atual_terreo_descendo:       ; Se andarAtual == 0, executa atual_terreo_descendo
+				; Se andarAtual == terreo
+					rjmp verifica_fila ; pula para verifica_fila
 
 			testa_primeiro_descendo:
-				cpi andarAtual, primeiro
-				brne testa_segundo_descendo
-				atual_primeiro_descendo:
+				cpi andarAtual, primeiro  ; Verifica andarAtual com primeiro (1)
+				brne testa_segundo_descendo ; Se andarAtual != 1, pula para testa_segundo_descendo
+				atual_primeiro_descendo:    ; Se andarAtual == 1, executa atual_primeiro_descendo
 				; se andarAtual = 1
 					sbrc regFila, filaTerreoExterno ; Verifica se andar terreo externo foi pressionado, se não, pula
 					ldi andarDestino, terreo ; Se foi pressionado, andar terreo é o novo destino
@@ -599,7 +575,7 @@ exec_atualizaFila:
 				cpi andarAtual, segundo
 				brne atual_terceiro_descendo
 				atual_segundo_descendo:
-				; se andarAtual = 2
+				; se andarAtual == 2
 					sbrc regFila, filaTerreoExterno ; Verifica se andar terreo externo foi pressionado, se não, pula
 					ldi andarDestino, terreo ; Se foi pressionado, andar terreo é o novo destino
 
@@ -615,7 +591,7 @@ exec_atualizaFila:
 					rjmp verifica_fila ; pula para verifica_fila
 
 			atual_terceiro_descendo:
-				; se andarAtual = 3
+				; se andarAtual == 3
 				sbrc regFila, filaTerreoExterno ; Verifica se andar terreo externo foi pressionado, se não, pula
 				ldi andarDestino, terreo ; Se foi pressionado, andar terreo é o novo destino
 
@@ -637,15 +613,14 @@ exec_atualizaFila:
 				rjmp verifica_fila ; pula para verifica_fila
 
 	verifica_fila:
-		; Precisa dar clear no tipoChamado
-		clr tipoChamado
+		ldi tipoChamado, naoPressionado ; tipoChamado = naoPressionado
 
 	cpi var_chegou, 1
-	brne chegou_mesmo_andar   ; Se var_chegou != 1, pula para chegou_mesmo_andar
+	brne fila_nao_chegou   ; Se var_chegou != 1, pula para fila_nao_chegou
 	ldi state, parado
 	rjmp desvio_final
 	
-	chegou_mesmo_andar:
+	fila_nao_chegou:
 
 	cp andarAtual, andarDestino ;Compara andar destino com andar atual
 	brlt destino_maior ;Desvia para destino_maior se andarAtual < andarDestino
@@ -670,62 +645,62 @@ exec_atualizaFila:
 exec_movendoCima:
 	ldi estaParado, 0      ;Define estaParado como 0
 	ldi var_chegou, 0      ;Define var_chegou como 0
-	ldi sentido, 1         ;Define sentido como 1 (Subindo)
+	ldi sentido, subindo         ;Define sentido como 1 (Subindo)
 	
 	cpi tipoChamado, naoPressionado ; Compara tipoChamado com 0
-	brne movendo_cima_chamada						; Se tipoChamado != 0, pula para movendo_cima_chamada
+	brne movendo_cima_chamada		; Se tipoChamado != 0, pula para movendo_cima_chamada
 
 	cpi tempoAguardando, 3 ; Compara tempoAguardando com 3
-	brlt fim_movendo_cima         ; Se tempoAguardando < 3 desvia para fim_movendo_cima
+	brlt desvio_final_movendo_cima         ; Se tempoAguardando < 3 desvia para desvio_final_movendo_cima
 	ldi state, trocaAndar  ; Se tempoAguardando >= 3 define o estado como trocaAndar
-	rjmp fim_movendo_cima
+	rjmp desvio_final_movendo_cima
 
 	movendo_cima_chamada:
 		ldi state, atualizaFila
 
-	fim_movendo_cima:
+	desvio_final_movendo_cima:
 	
 	ret
 
 exec_movendoBaixo:
 	ldi estaParado, 0      ;Define estaParado como 0
 	ldi var_chegou, 0      ;Define var_chegou como 0
-	ldi sentido, 0         ;Define sentido como 0 (Descendo)
+	ldi sentido, descendo         ;Define sentido como Descendo
 
 	cpi tipoChamado, naoPressionado ; Compara tipoChamado com 0
 	brne movendo_baixo_chamada						; Se tipoChamado != 0, pula para movendo_baixo_chamada
 
 	cpi tempoAguardando, 3 ; Compara tempoAguardando com 3
-	brlt fim_movendo_baixo        ; Se tempoAguardando < 3 desvia para fim_movendo_baixo
+	brlt desvio_final_movendo_baixo        ; Se tempoAguardando < 3 desvia para desvio_final_movendo_baixo
 	ldi state, trocaAndar  ; Se tempoAguardando >= 3 define o estado como trocaAndar
-	rjmp fim_movendo_baixo
+	rjmp desvio_final_movendo_baixo		   ; 
 	
 	movendo_baixo_chamada:
 		ldi state, atualizaFila
 
-	fim_movendo_baixo:
+	desvio_final_movendo_baixo:
 
 	ret
 
 exec_trocaAndar:
 	clr tempoAguardando  		    ; Zera o tempoAguardando
 	
-	cpi sentido, 1 			  	    ; Compara o sentido com 1
-	brne subtrai_andar 			    ; se sentido != 1 desvia para subtrai_andar
+	cpi sentido, subindo 		  ; Verifica se o sentido é subindo
+	brne subtrai_andar 			  ; se sentido != 1 desvia para subtrai_andar
 	subi andarAtual, -1   		  ; Se sentido == 1 soma 1 ao andarAtual
-	rjmp t_ok_calc        		  ; Se o andarAtual já foi alterado pula para t_ok_calc
+	rjmp t_decisao_andar          ; Se o andarAtual já foi alterado pula para t_decisao_andar
 
 	subtrai_andar: 
 	subi andarAtual, 1          ; Se sentido != 1 subtrai 1 do andarAtual
 
-	t_ok_calc:
+	t_decisao_andar:
 	cp andarAtual, andarDestino ; Compara andarAtual com andarDestino
 	brne t_nao_chegou           ; Se andarAtual != andarDestino desvia para t_nao_chegou
 	ldi state, chegou           ; Se andarAtual == andarDestino define o estado como chegou
 	rjmp t_fim_troca_andar     ; Se o elevador já chegou no andar destino pula para t_fim_troca_andar
 
 	t_nao_chegou:
-	cpi sentido, 1              ; Compara o sentido com 1
+	cpi sentido, subindo 		; Verifica se o sentido é subindo
 	brne volta_a_descer         ; Se sentido != 1 desvia para volta_a_descer
 	ldi state, movendoCima      ; Se sentido == 1 define o estado como movendoCima
 	rjmp t_fim_troca_andar      ; O elevador não chegou no andar destino, mas ele precisa continuar a subir
