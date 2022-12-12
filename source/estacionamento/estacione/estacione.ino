@@ -55,10 +55,10 @@ UltraSonicDistanceSensor ultrasonic4(sensor4TriggerPin, sensor4EchoPin);
 UltraSonicDistanceSensor sensors[4] = {ultrasonic1, ultrasonic2, ultrasonic3, ultrasonic4};
 
 ParkingSpace parkingSpaces[4] = { 
- ParkingSpace(0, 3, "B4", "S4RGBRE"),
- ParkingSpace(1, 4, "B1", "S5RGBGRE"), 
- ParkingSpace(2, 2, "A1", "S3RBRE"), 
- ParkingSpace(3, 1, "A2", "S6RBGBGRE")  
+ ParkingSpace(0, 3, "B4", "S7RGRBRBGE"),
+ ParkingSpace(1, 4, "B1", "S4RGRGE"), 
+ ParkingSpace(2, 2, "A1", "S3RBGE"), 
+ ParkingSpace(3, 1, "A2", "S4RBRGE")  
 };
 
 void clearRowLcd(int row) {
@@ -105,7 +105,7 @@ ParkingSpace getBestParkingSpace() {
       }
     }
   }
-  Serial.println((String)parkingSpaces[bestParkingSpace].name + (String)parkingSpaces[bestParkingSpace].sensorId + (String)parkingSpaces[bestParkingSpace].gateDistance);
+//  Serial.println((String)parkingSpaces[bestParkingSpace].name + (String)parkingSpaces[bestParkingSpace].sensorId + (String)parkingSpaces[bestParkingSpace].gateDistance);
   return parkingSpaces[bestParkingSpace];
 }
 
@@ -120,7 +120,7 @@ void openGateButtonPressed(String button){
   if(button == "outside") {
     lcd.setCursor(0, 1);
     ParkingSpace bestSpot = getBestParkingSpace();
-    lcd.print(bestSpot.name + " " + (String)bestSpot.gateDistance + " " + (String)bestSpot.path);
+    lcd.print("Sua vaga eh: "+ bestSpot.name);
     openGate();
     clearRowLcd(1);
   } else if(button == "inside") {
@@ -150,28 +150,24 @@ void loop()
 {     
     int openGateOutsideButton = digitalRead(outsideButtonPin);
     int openGateInsideButton = digitalRead(insideButtonPin);
+    ParkingSpace bestSpot = getBestParkingSpace();
+    Serial.println(bestSpot.path);
+    
     if(openGateOutsideButton) {
       openGateButtonPressed("outside");
     } else if(openGateInsideButton) {
       openGateButtonPressed("inside");
-    }
-
-    if(Serial.available()){
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print("Serial: " + Serial.readString());
-      Serial.flush();
     }
     
     float distance1 = ultrasonic1.measureDistanceCm();
     float distance2 = ultrasonic2.measureDistanceCm();
     float distance3 = ultrasonic3.measureDistanceCm();
     float distance4 = ultrasonic4.measureDistanceCm();
-    Serial.println("Sensor 1 - B4: " + (String)distance1 + " cm");
-    Serial.println("Sensor 2 - B1: " + (String)distance2 + " cm");
-    Serial.println("Sensor 3 - A1: " + (String)distance3 + " cm");
-    Serial.println("Sensor 4 - A2: " + (String)distance4 + " cm");
-    Serial.println();
+//    Serial.println("Sensor 1 - B4: " + (String)distance1 + " cm");
+//    Serial.println("Sensor 2 - B1: " + (String)distance2 + " cm");
+//    Serial.println("Sensor 3 - A1: " + (String)distance3 + " cm");
+//    Serial.println("Sensor 4 - A2: " + (String)distance4 + " cm");
+//    Serial.println();
     // if(Serial.available()){
     //   sensorDebug = Serial.readString().toInt();
     // }

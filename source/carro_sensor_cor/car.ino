@@ -1,7 +1,7 @@
 #include "Adafruit_TCS34725.h"
 
 /* Definições Úteis */
-#define LONGEST_PATH 7
+#define LONGEST_PATH 10
 #define BUZZER 9
 #define BUZZER_FREQ 2000
 #define BUZZER_FREQ_DONE 5000
@@ -112,12 +112,14 @@ void long_beep(int times) {
 }
 
 void waiting_message_exec() {
+  Serial.println("Waiting message...");
   if (Serial.available()) {
     String recv_message = Serial.readString();
     Serial.println(recv_message);
     String beg = "S";
     String end_1 = "E\n";
-    String end_2 = "E";
+    String end_2 = "E\r\n";
+
     if (recv_message.startsWith(beg) &&
         (recv_message.endsWith(end_1) || recv_message.endsWith(end_2))) {
       int path_size = recv_message.charAt(MSG_IDX_SIZE) - '0';
@@ -129,6 +131,7 @@ void waiting_message_exec() {
       short_beep(2, false);
     }
   }
+  delay(200);
 }
 
 COLOR read_car_color() {
@@ -289,6 +292,7 @@ void done_exec() {
     Serial.println("You may park the vehicle");
     
     short_beep(3, true);
+    delay(1200);
     analogWrite(GREEN_PIN, 255);
     analogWrite(BLUE_PIN, 255);
     analogWrite(RED_PIN, 255); 
