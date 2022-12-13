@@ -27,7 +27,7 @@
 Servo servo;
 int currentAngleServo = angClose;
 int sensorDebug = 1;
-
+int parkingSpacesCount = -1;
 
 class ParkingSpace {
    public:
@@ -35,12 +35,15 @@ class ParkingSpace {
     float gateDistance;
     String name;
     String path;
+    bool isFree;
+    int timeTo;
 
     ParkingSpace(int sensorId, float gateDistance, String name, String path) {
       this->sensorId = sensorId;
       this->gateDistance = gateDistance;
       this->name = name;
       this->path = path;
+      this->isFree = true;
     };
 };
 
@@ -85,15 +88,45 @@ void moveGate(int moviment){
     }
 }
 
-int freeParkingSpace(UltraSonicDistanceSensor ultrasonic) {
-  float cmMsec = ultrasonic.measureDistanceCm();
 
-  return cmMsec > 10;
+float getMean(float array[], int size) {
+  float sum = 0;
+  float max = array[0];
+  float min = array[0];
+  for(int i = 0; i < size; i++) {
+    sum += array[i];
+    if(array[i] > max) {
+      max = array[i];
+    }
+    if(array[i] < min) {
+      min = array[i];
+    }
+  }
+  return (sum - max - min) / (size - 2);
+}
+
+float getSensorDistance(UltraSonicDistanceSensor sensor) {
+  float measures[10];
+  for(int i = 0;i < 10; i++) {
+    measures[i] = sensor.measureDistanceCm();
+  }
+
+  int n = sizeof(measures) / sizeof(measures[0]);
+
+  float mean = getMean(measures, n);
+  
+  return mean;
+}
+
+int freeParkingSpace(UltraSonicDistanceSensor ultrasonic) {
+  float distance = getSensorDistance(ultrasonic);
+
+  return distance > 10;
 }
 
 ParkingSpace getBestParkingSpace() {
   float bestDistance = 100;
-  int bestParkingSpace = 0;
+  int bestParkingSpace = -1;
   for(int i = 0; i < 4; i++) {
     float distance = parkingSpaces[i].gateDistance;
     int sensorId = parkingSpaces[i].sensorId;
@@ -105,11 +138,15 @@ ParkingSpace getBestParkingSpace() {
       }
     }
   }
-//  Serial.println((String)parkingSpaces[bestParkingSpace].name + (String)parkingSpaces[bestParkingSpace].sensorId + (String)parkingSpaces[bestParkingSpace].gateDistance);
-  return parkingSpaces[bestParkingSpace];
+  
+  if(bestParkingSpace != -1 && parkingSpaces[bestParkingSpace].isFree) {
+    return parkingSpaces[bestParkingSpace];
+  } else {
+    return ParkingSpace(-1, -1, "Nenhuma vaga", "Nenhuma vaga");
+  }
 }
 
-void openGate(int timeToCLose = 5000){
+void openGate(int timeToCLose = 6000){
   moveGate(1);
   delay(timeToCLose);
   moveGate(0);
@@ -120,20 +157,46 @@ void openGateButtonPressed(String button){
   if(button == "outside") {
     lcd.setCursor(0, 1);
     ParkingSpace bestSpot = getBestParkingSpace();
-    lcd.print("Sua vaga eh: "+ bestSpot.name);
-    openGate();
-    clearRowLcd(1);
+    if(bestSpot.sensorId != -1){
+      lcd.print("Sua vaga eh: "+ bestSpot.name);
+      //bestSpot->isFree = false;
+      openGate();
+      clearRowLcd(1);
+    } else {
+      lcd.print(bestSpot.name);
+      delay(5000);
+      clearRowLcd(1);
+    }
   } else if(button == "inside") {
     openGate();
   }
 }
 
-//void sendParkingStringToSerial(String parkingStrin)
+void updateParkingSpacesNumber(){
+  clearRowLcd(1);
+  lcd.setCursor(0, 1);
+  lcd.print("Vagas disp.: " + (String)parkingSpacesCount);
+}
+
+void countParkingSpaces(){
+
+  int count = 0;
+
+  for(int i = 0; i < 4; i++) {
+    int sensorId = parkingSpaces[i].sensorId;
+    if(freeParkingSpace(sensors[sensorId])) {
+      count++;
+    }
+  }
+
+  if(count != parkingSpacesCount) {
+    parkingSpacesCount = count;
+    updateParkingSpacesNumber();
+  }
+}
 
 void setup()
 {
-
-
   Serial.begin(9600);
   pinMode(insideButtonPin, INPUT);
   pinMode(outsideButtonPin, INPUT);
@@ -143,15 +206,16 @@ void setup()
   lcd.backlight();
   lcd.setCursor(0, 0);
   lcd.print("EstaciOne");
-  
-  
 }
+
 void loop()
 {     
     int openGateOutsideButton = digitalRead(outsideButtonPin);
     int openGateInsideButton = digitalRead(insideButtonPin);
     ParkingSpace bestSpot = getBestParkingSpace();
-    Serial.println(bestSpot.path);
+    if(bestSpot.sensorId != -1){
+      Serial.println(bestSpot.path);
+    }
     
     if(openGateOutsideButton) {
       openGateButtonPressed("outside");
@@ -159,35 +223,18 @@ void loop()
       openGateButtonPressed("inside");
     }
     
-    float distance1 = ultrasonic1.measureDistanceCm();
-    float distance2 = ultrasonic2.measureDistanceCm();
-    float distance3 = ultrasonic3.measureDistanceCm();
-    float distance4 = ultrasonic4.measureDistanceCm();
-//    Serial.println("Sensor 1 - B4: " + (String)distance1 + " cm");
-//    Serial.println("Sensor 2 - B1: " + (String)distance2 + " cm");
-//    Serial.println("Sensor 3 - A1: " + (String)distance3 + " cm");
-//    Serial.println("Sensor 4 - A2: " + (String)distance4 + " cm");
-//    Serial.println();
-    // if(Serial.available()){
-    //   sensorDebug = Serial.readString().toInt();
-    // }
-    // clearRowLcd(1);
-    // lcd.setCursor(0, 1);
-    // switch(sensorDebug){
-    //   case 1:
-    //     lcd.print(distance1);
-    //     break;
-    //   case 2:
-    //     lcd.print(distance2);
-    //     break;
-    //   case 3:
-    //     lcd.print(distance3);
-    //     break;
-    //   case 4:
-    //     lcd.print(distance4);
-    //     break;  
-    // }
-
+    countParkingSpaces();
+    
+    
+    // float distance1 = getSensorDistance(ultrasonic1);
+    // float distance2 = getSensorDistance(ultrasonic2);
+    // float distance3 = getSensorDistance(ultrasonic3);
+    // float distance4 = getSensorDistance(ultrasonic4);
+    // Serial.println("Sensor 1 - B4: " + (String)distance1 + " cm");
+    // Serial.println("Sensor 2 - B1: " + (String)distance2 + " cm");
+    // Serial.println("Sensor 3 - A1: " + (String)distance3 + " cm");
+    // Serial.println("Sensor 4 - A2: " + (String)distance4 + " cm");
+    // Serial.println();
 
     delay(500);
  
