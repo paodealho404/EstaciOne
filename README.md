@@ -1,5 +1,5 @@
 # EstaciOne
-Projeto Final da disciplina de Microcontroladores e Aplicações
+Projeto Final da disciplina de Microcontroladores e Aplicações (2022.1)
 
 ### Alunos:
 - José Ferreira Leite Neto (19111153)
