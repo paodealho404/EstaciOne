@@ -1,29 +1,118 @@
+/* Importações de bibliotecas */
 #include <HCSR04.h>
 #include <Servo.h>
 #include <Ultrasonic.h>
 #include <LiquidCrystal_I2C.h>
 
 /* Definições Úteis */
+
+/**
+ * @brief Pino trigger do sensor 1.
+ */
 #define sensor1TriggerPin 2
+
+/**
+ * @brief Pino echo do sensor 1.
+ */
 #define sensor1EchoPin 3
+
+/**
+ * @brief Pino trigger do sensor 4.
+ */
 #define sensor2TriggerPin 4
+
+/**
+ * @brief Pino echo do sensor 5.
+ */
 #define sensor2EchoPin 5
+
+/**
+ * @brief Pino trigger do sensor 6.
+ */
 #define sensor3TriggerPin 6
+
+/**
+ * @brief Pino echo do sensor 7.
+ */
 #define sensor3EchoPin 7
+
+/**
+ * @brief Pino trigger do sensor 8.
+ */
 #define sensor4TriggerPin 8
+
+/**
+ * @brief Pino echo do sensor 9.
+ */
 #define sensor4EchoPin 9
+
+/**
+ * @brief Pino do botão interno.
+ */
 #define insideButtonPin 13
+
+/**
+ * @brief Pino do botão externo.
+ */
 #define outsideButtonPin 12
-#define angClose 90
-#define angOpen 20
+
+/**
+ * @brief Pino do servomotor.
+ */
 #define servoPin 11
 
+/**
+ * @brief Ângulo de fechamento da cancela (°).
+ */
+#define angClose 90
+
+/**
+ * @brief Ângulo de abertura da cancela (°).
+ */
+#define angOpen 20
+
+/**
+ * @brief Distância mínima para que a vaga seja considerada livre (cm).
+ */
+#define minFreeDistance 10
+
+/**
+ * @brief Tempo para fechar a cancela (ms).
+ */
+#define timeToCLose 6000
+
+/**
+ * @brief Número de leituras para calcular a média do sensor ultrassônico.
+ */
+#define numberOfReads 10
+
+/**
+ * @brief Declaração dos estados do estacionamento.
+ */
 typedef enum {
   WAITING_ACTION,
   BUTTON_PRESSED,
   RUNNING,
   DONE,
 } PARKING_STATE;
+
+/**
+ * @brief Definição da classe ParkingSpace (representa uma vaga).
+ */
+class ParkingSpace {
+  public:
+  int sensorId;
+  float gateDistance;
+  String name;
+  String path;
+
+  ParkingSpace(int sensorId, float gateDistance, String name, String path) {
+    this->sensorId = sensorId;
+    this->gateDistance = gateDistance;
+    this->name = name;
+    this->path = path;
+  };
+};
 
 Servo servo;
 
@@ -42,25 +131,8 @@ String buttonPressed = "inside";
 int currentAngleServo = angClose;
 int parkingSpacesCount = -1;
 
-class ParkingSpace {
-   public:
-    int sensorId;
-    float gateDistance;
-    String name;
-    String path;
-    bool isFree;
-    int timeTo;
-
-    ParkingSpace(int sensorId, float gateDistance, String name, String path) {
-      this->sensorId = sensorId;
-      this->gateDistance = gateDistance;
-      this->name = name;
-      this->path = path;
-      this->isFree = true;
-    };
-};
-
 ParkingSpace bestSpot = ParkingSpace(-1, -1, "Nenhuma vaga", "Nenhuma vaga");
+
 ParkingSpace parkingSpaces[4] = { 
  ParkingSpace(0, 3, "B4", "S7RGRBRBGE"),
  ParkingSpace(1, 4, "B1", "S4RGRGE"), 
@@ -68,28 +140,90 @@ ParkingSpace parkingSpaces[4] = {
  ParkingSpace(3, 1, "A2", "S4RBRGE")  
 };
 
+/**
+ * @brief Verifica se um dos botões da cancela foi pressionado e atualiza o estado.
+ */
 void waiting_action_exec();
-void button_pressed_exec();
-void running_exec();
-void done_exec();
-void clearRowLcd(int row);
-void moveGate(int moviment);
-float getMean(float array[], int size);
-float getSensorDistance(UltraSonicDistanceSensor sensor);
-int freeParkingSpace(UltraSonicDistanceSensor ultrasonic);
-ParkingSpace getBestParkingSpace();
-void openGate(int timeToCLose);
-void openGateButtonPressed(String button);
-void updateParkingSpacesNumber();
-void countParkingSpaces();
 
+/**
+ * @brief Atualiza o estado de acordo com o botão que foi pressionado para abrir a cancela.
+ */
+void button_pressed_exec();
+
+/**
+ * @brief Se uma vaga tiver sido solicitada, monitora a ocupação desta e, quando ocupada, atualiza o estado.
+ */
+void running_exec();
+
+/**
+ * @brief Atualiza o estado após o fim do ciclo da máquina de estados.
+ */
+void done_exec();
+
+/**
+ * @brief Limpa a linha selecionada no LCD.
+ * @param int Linha selecionada.
+ */
+void clearRowLcd(int row);
+
+/**
+ * @brief Movimenta a cancela de acordo com o movimento informado.
+ * @param int Movimento desejado 0 = Fecha | 1 = Abre.
+ */
+void moveGate(int moviment);
+
+/**
+ * @brief Abre a cancela.
+ */
+void openGate();
+
+/**
+ * @brief Abre a cancela e, se o botão pressionado foi o externo apresenta a vaga selecionada (se indisponível, informa).
+ * @param String Botão pressionado.
+ */
+void openGateButtonPressed(String button);
+
+/**
+ * @brief Conta a quantidade de vagas disponíveis e atualiza o LCD.
+ */
+void updateParkingSpaces();
+
+/**
+ * @brief Remove os outliers das leituras informadas e calcula a média.
+ * @param float[] Array de leituras.
+ * @param int Quantidade de leituras.
+ * @return float Média calculada.
+ */
+float getMean(float array[], int size);
+
+/**
+ * @brief Calcula a distância lida pelo sensor.
+ * @param UltraSonicDistanceSensor Sensor que se deseja obter a distância.
+ * @return float Distância lida.
+ */
+float getSensorDistance(UltraSonicDistanceSensor sensor);
+
+/**
+ * @brief Verifica se a vaga passada como parâmetro está livre.
+ * @param UltraSonicDistanceSensor Sensor ultrassonico em questão.
+ * @return int 0 = Vaga está ocupada | 1 = Vaga está disponível.
+ */
+int freeParkingSpace(UltraSonicDistanceSensor ultrasonic);
+
+/**
+ * @brief Avalia a melhor vaga disponível caso haja, e a retorna, ou informa que não há vagas.
+ * @return ParkingSpace Melhor vaga disponível.
+ */
+ParkingSpace getBestParkingSpace();
+
+/* Implementação do setup e loop */
 void setup()
 {
   Serial.begin(9600);
   pinMode(insideButtonPin, INPUT);
   pinMode(outsideButtonPin, INPUT);
   servo.attach(servoPin);
-  servo.write(90);
+  servo.write(angClose);
   lcd.init();
   lcd.backlight();
   lcd.setCursor(0, 0);
@@ -98,44 +232,35 @@ void setup()
 
 void loop()
 {     
-    bestSpot = getBestParkingSpace();
-    if(bestSpot.sensorId != -1){
-      Serial.println(bestSpot.path);
-    }
-    countParkingSpaces();
-    
-    switch(state){
-      case WAITING_ACTION:
-        waiting_action_exec();
-        break;
-      case BUTTON_PRESSED:
-        button_pressed_exec();
-        break;
-      case RUNNING:
-        running_exec();
-        break;
-      case DONE:
-        done_exec();
-        break;
-    }
-    
-    
+  bestSpot = getBestParkingSpace();
 
-    // float distance1 = getSensorDistance(ultrasonic1);
-    // float distance2 = getSensorDistance(ultrasonic2);
-    // float distance3 = getSensorDistance(ultrasonic3);
-    // float distance4 = getSensorDistance(ultrasonic4);
-    // Serial.println("Sensor 1 - B4: " + (String)distance1 + " cm");
-    // Serial.println("Sensor 2 - B1: " + (String)distance2 + " cm");
-    // Serial.println("Sensor 3 - A1: " + (String)distance3 + " cm");
-    // Serial.println("Sensor 4 - A2: " + (String)distance4 + " cm");
-    // Serial.println();
+  if(bestSpot.sensorId != -1){
+    Serial.println(bestSpot.path);
+  }
 
-    delay(500);
- 
+  updateParkingSpaces();
+  
+  switch(state){
+    case WAITING_ACTION:
+      waiting_action_exec();
+      break;
+    case BUTTON_PRESSED:
+      button_pressed_exec();
+      break;
+    case RUNNING:
+      running_exec();
+      break;
+    case DONE:
+      done_exec();
+      break;
+  }
+
+  delay(500);
 }
 
+/* As funções devem ser implementadas abaixo desta linha */
 void waiting_action_exec(){
+
   int openGateOutsideButton = digitalRead(outsideButtonPin);
   int openGateInsideButton = digitalRead(insideButtonPin);
 
@@ -162,7 +287,6 @@ void running_exec() {
     UltraSonicDistanceSensor bestSpotSensor = sensors[bestSpot.sensorId];
 
     if(!freeParkingSpace(bestSpotSensor)) {
-      Serial.println("A vaga " + bestSpot.name + " foi ocupada!");
       state = DONE;
     }
   } else {
@@ -198,7 +322,6 @@ void moveGate(int moviment){
     }
 }
 
-
 float getMean(float array[], int size) {
   float sum = 0;
   float max = array[0];
@@ -216,22 +339,19 @@ float getMean(float array[], int size) {
 }
 
 float getSensorDistance(UltraSonicDistanceSensor sensor) {
-  float measures[10];
-  for(int i = 0;i < 10; i++) {
+  float measures[numberOfReads];
+
+  for(int i = 0;i < numberOfReads; i++) {
     measures[i] = sensor.measureDistanceCm();
   }
 
-  int n = sizeof(measures) / sizeof(measures[0]);
-
-  float mean = getMean(measures, n);
-  
-  return mean;
+  return getMean(measures, numberOfReads);
 }
 
 int freeParkingSpace(UltraSonicDistanceSensor ultrasonic) {
   float distance = getSensorDistance(ultrasonic);
 
-  return distance > 10;
+  return distance > minFreeDistance;
 }
 
 ParkingSpace getBestParkingSpace() {
@@ -249,14 +369,14 @@ ParkingSpace getBestParkingSpace() {
     }
   }
   
-  if(bestParkingSpace != -1 && parkingSpaces[bestParkingSpace].isFree) {
+  if(bestParkingSpace != -1) {
     return parkingSpaces[bestParkingSpace];
   } else {
     return ParkingSpace(-1, -1, "Nenhuma vaga", "Nenhuma vaga");
   }
 }
 
-void openGate(int timeToCLose = 10000){
+void openGate(){
   moveGate(1);
   delay(timeToCLose);
   moveGate(0);
@@ -269,7 +389,6 @@ void openGateButtonPressed(String button){
     bestSpot = getBestParkingSpace();
     if(bestSpot.sensorId != -1){
       lcd.print("Sua vaga eh: "+ bestSpot.name);
-      //bestSpot->isFree = false;
       openGate();
       clearRowLcd(1);
     } else {
@@ -282,14 +401,7 @@ void openGateButtonPressed(String button){
   }
 }
 
-void updateParkingSpacesNumber(){
-  clearRowLcd(1);
-  lcd.setCursor(0, 1);
-  lcd.print("Vagas disp.: " + (String)parkingSpacesCount);
-}
-
-void countParkingSpaces(){
-
+void updateParkingSpaces(){
   int count = 0;
 
   for(int i = 0; i < 4; i++) {
@@ -301,6 +413,8 @@ void countParkingSpaces(){
 
   if(count != parkingSpacesCount) {
     parkingSpacesCount = count;
-    updateParkingSpacesNumber();
+    clearRowLcd(1);
+    lcd.setCursor(0, 1);
+    lcd.print("Vagas disp.: " + (String)parkingSpacesCount);
   }
 }

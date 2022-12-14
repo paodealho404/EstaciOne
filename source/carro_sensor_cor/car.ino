@@ -1,22 +1,91 @@
 #include "Adafruit_TCS34725.h"
 
 /* Definições Úteis */
+/**
+ * @brief Tamanho do maior caminho do array de cores.
+*/
 #define LONGEST_PATH 10
-#define BUZZER 9
-#define BUZZER_FREQ 2000
-#define BUZZER_FREQ_DONE 5000
-#define DELAY_LONG_BEEP 500
-#define DELAY_SHORT_BEEP 200
-#define MSG_IDX_SIZE 1
-#define MSG_IDX_BEGIN 2
-#define RED_PIN 3
-#define GREEN_PIN 5
-#define BLUE_PIN 6
-#define CALIB_RED 85
-#define CALIB_BLUE 95
-#define CALIB_GREEN 96
-/********************/
 
+/**
+ * @brief Pino do Buzzer.
+*/
+#define BUZZER 9
+
+/**
+ * @brief Frequência padrão emitida pelo Buzzer.
+*/
+#define BUZZER_FREQ 2000
+
+/**
+ * @brief Frequência emitida pelo Buzzer ao chegar na vaga correta.
+*/
+#define BUZZER_FREQ_DONE 5000
+
+/**
+ * @brief Delay (duração) do beep longo.
+*/
+#define DELAY_LONG_BEEP 500
+
+/**
+ * @brief Delay (duração) do beep curto.
+*/
+#define DELAY_SHORT_BEEP 200
+
+/**
+ * @brief Índice onde se inicia o tamanho da mensagem do protocolo.
+*/
+#define MSG_IDX_SIZE 1
+
+/**
+ * @brief Índice onde se inicia o caminho a ser seguido na mensagem.
+*/
+#define MSG_IDX_BEGIN 2
+
+/**
+ * @brief Pino do LED de cor vermelha.
+*/
+#define RED_PIN 3
+
+/**
+ * @brief Pino do LED de cor verde.
+*/
+#define GREEN_PIN 5
+
+/**
+ * @brief Pino do LED de cor azul.
+*/
+#define BLUE_PIN 6
+
+/**
+ * @brief Valor mínimo de limiar de calibração da cor Vermelha. 
+*/
+#define CALIB_RED 85
+
+/**
+ * @brief Valor mínimo de limiar de calibração da cor Azul. 
+*/
+#define CALIB_BLUE 95
+
+/**
+ * @brief Valor mínimo de limiar de calibração da cor Verde. 
+*/
+#define CALIB_GREEN 96
+
+/**
+ * @brief Valor definido para desligar o LED.
+ * 
+ */
+#define LED_OFF 255
+
+/**
+ * @brief Valor definido para ligar o LED.
+ * 
+ */
+#define LED_ON 0
+
+/**
+ * @brief Tipos de cores detectados pelo sensor.
+ */
 typedef enum {
   NO_COLOR = 0,
   RED,
@@ -26,24 +95,32 @@ typedef enum {
   __COLOR_AMOUNT,
 } COLOR;
 
+/**
+ * @brief Caminho do mapa a ser percorrido pelo carrinho.
+*/
 typedef struct {
   COLOR color_list[LONGEST_PATH];
 } PATH_MAP;
 
+/**
+ * @brief Declaração dos estados do carro.
+*/
 typedef enum {
   WAITING_MESSAGE,
   RUNNING,
   DONE,
 } CAR_STATE;
 
+/**
+ * @brief Estrutura com as leituras das cores.
+*/
 typedef struct _ColorSensor {
   float red;
   float green;
   float blue;
 } ColorSensor;
 
-Adafruit_TCS34725 tcs =
-    Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_240MS, TCS34725_GAIN_1X);
+Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_240MS, TCS34725_GAIN_1X);
 PATH_MAP road_path = {0};
 ColorSensor colorRead = {0};
 CAR_STATE state = WAITING_MESSAGE;
@@ -52,46 +129,82 @@ COLOR next_path = {0};
 int path_idx = 0;
 boolean parked = false;
 
+/**
+ * @brief Emite bipes curtos de acordo com o solicitado.
+ * @param int Quantidade de vezes que os bipes devem ser emitidos. 
+ * @param int 0 - caso não tenha chegado na vaga, 1 - caso contrário.
+ */
 void short_beep(int times, int done);
+
+/**
+ * @brief Emite bipes longos de acordo com o solicitado.
+ * @param int Quantidade de vezes que os bipes devem ser emitidos. 
+ */
 void long_beep(int times);
+
+/**
+ * @brief Execução do estado onde o carro aguarda pela mensagem do protocolo.
+ * 
+ */
 void waiting_message_exec();
+
+/**
+ * @brief Execução do estado onde o carro está verificando o caminho e buscando sua vaga.
+ * 
+ */
 void running_exec();
+
+/**
+ * @brief Execução do estado onde o carro está estacionando em sua vaga.
+ * 
+ */
 void done_exec();
-void assign_path();
-void print_path();
+
+/**
+ * @brief Função utilizada para construir o caminho a ser percorrido.
+ * @param int tamanho do caminho informado na mensagem.
+ * @param String caminho informado na mensagem.
+ */
+void assign_path(int size, String path);
+
+/**
+ * @brief Função que executa e avalia a leitura da cor sendo feita pelo sensor.
+ * @return COLOR - Cor identificada.
+ */
 COLOR read_car_color();
 
+
+/* Início da implementação padrão */
 void setup() {
   Serial.begin(9600);
   pinMode(BUZZER, OUTPUT);
-  analogWrite(RED_PIN, 255);
-  analogWrite(GREEN_PIN, 255);
-  analogWrite(BLUE_PIN, 255);
   pinMode(RED_PIN, OUTPUT);
   pinMode(GREEN_PIN, OUTPUT);
   pinMode(BLUE_PIN, OUTPUT);
+  analogWrite(RED_PIN, LED_OFF);
+  analogWrite(GREEN_PIN, LED_OFF);
+  analogWrite(BLUE_PIN, LED_OFF);
 
-  Serial.println("Starting...");
   long_beep(2);
 }
 
 void loop() {
   switch (state) {
-  case WAITING_MESSAGE:
-    waiting_message_exec();
-    break;
-  case RUNNING:
-    running_exec();
-    break;
-  case DONE:
-    done_exec();
-    break;
-  default:
-    break;
+    case WAITING_MESSAGE:
+      waiting_message_exec();
+      break;
+    case RUNNING:
+      running_exec();
+      break;
+    case DONE:
+      done_exec();
+      break;
+    default:
+      break;
   }
 }
 
-/* As funções devem ser implementadas abaixo desta linha*/
+/* As funções devem ser implementadas abaixo desta linha */
 
 void short_beep(int times, int done) {
   for (int i = 0; i < times; i++) {
@@ -104,6 +217,7 @@ void short_beep(int times, int done) {
     delay(2 * DELAY_SHORT_BEEP);
   }
 }
+
 void long_beep(int times) {
   for (int i = 0; i < times; i++) {
     tone(BUZZER, BUZZER_FREQ, DELAY_LONG_BEEP);
@@ -112,10 +226,8 @@ void long_beep(int times) {
 }
 
 void waiting_message_exec() {
-  Serial.println("Waiting message...");
   if (Serial.available()) {
     String recv_message = Serial.readString();
-    Serial.println(recv_message);
     String beg = "S";
     String end_1 = "E\n";
     String end_2 = "E\r\n";
@@ -126,7 +238,6 @@ void waiting_message_exec() {
       path_idx = 0;
       assign_path(path_size, recv_message.substring(MSG_IDX_BEGIN,
                                                     MSG_IDX_BEGIN + path_size));
-      print_path();
       state = RUNNING;
       short_beep(2, false);
     }
@@ -136,28 +247,19 @@ void waiting_message_exec() {
 
 COLOR read_car_color() {
   tcs.getRGB(&colorRead.red, &colorRead.green, &colorRead.blue);
-  Serial.println("Running (R: " + String(colorRead.red) +
-                 " G: " + String(colorRead.green) +
-                 " B: " + String(colorRead.blue) + " ) ...");
 
-  if ((colorRead.red >= CALIB_RED) && (colorRead.green < CALIB_GREEN) &&
-      (colorRead.blue < CALIB_BLUE)) {
-    Serial.println("RED");
+  if ((colorRead.red >= CALIB_RED) && (colorRead.green < CALIB_GREEN) && (colorRead.blue < CALIB_BLUE)) {
     return RED;
   }
 
-  if ((colorRead.blue >= CALIB_BLUE) && (colorRead.green < CALIB_GREEN) &&
-      (colorRead.red < CALIB_RED)) {
-    Serial.println("BLUE");
+  if ((colorRead.blue >= CALIB_BLUE) && (colorRead.green < CALIB_GREEN) && (colorRead.red < CALIB_RED)) {
     return BLUE;
   }
 
-  if ((colorRead.green >= CALIB_GREEN) && (colorRead.red < CALIB_RED) &&
-      (colorRead.blue < CALIB_BLUE)) {
-    Serial.println("GREEN");
+  if ((colorRead.green >= CALIB_GREEN) && (colorRead.red < CALIB_RED) && (colorRead.blue < CALIB_BLUE)) {
     return GREEN;
   }
-  Serial.println("UNKNOWN");
+
   return UNKNOWN_COLOR;
 }
 
@@ -184,67 +286,6 @@ void assign_path(int size, String path) {
   current_path = road_path.color_list[0];
 }
 
-void print_path() {
-  for (int i = 0; i < LONGEST_PATH; i++) {
-    switch (road_path.color_list[i]) {
-
-    case RED:
-      Serial.print("R ");
-      break;
-    case GREEN:
-      Serial.print("G ");
-      break;
-
-    case BLUE:
-      Serial.print("B ");
-      break;
-
-    case NO_COLOR:
-      Serial.print("X ");
-      break;
-    }
-  }
-  Serial.print('\n');
-}
-
-void print_current_path() {
-
-  Serial.print("Follow: ");
-  switch (current_path) {
-  case RED:
-    Serial.println("RED");
-    break;
-  case GREEN:
-    Serial.println("GREEN");
-    break;
-  case BLUE:
-    Serial.println("BLUE");
-    break;
-  case NO_COLOR:
-    Serial.println("FINISHED");
-    break;
-  }
-}
-
-void print_next_path() {
-
-  Serial.print("Next: ");
-  switch (next_path) {
-  case RED:
-    Serial.println("RED");
-    break;
-  case GREEN:
-    Serial.println("GREEN");
-    break;
-  case BLUE:
-    Serial.println("BLUE");
-    break;
-  case NO_COLOR:
-    Serial.println("FINISHED");
-    break;
-  }
-}
-
 void running_exec() {
   COLOR curr_read = read_car_color();
   if (curr_read != current_path && curr_read != next_path) {
@@ -254,8 +295,6 @@ void running_exec() {
     path_idx += 1;
     current_path = next_path;
     next_path = road_path.color_list[path_idx];
-    print_current_path();
-    print_next_path();
     if (next_path == NO_COLOR) {
       state = DONE;
     }
@@ -263,39 +302,35 @@ void running_exec() {
 
   switch (curr_read) {
   case RED:
-    analogWrite(RED_PIN, 0);
-    analogWrite(GREEN_PIN, 255);
-    analogWrite(BLUE_PIN, 255);
+    analogWrite(RED_PIN, LED_ON);
+    analogWrite(GREEN_PIN, LED_OFF);
+    analogWrite(BLUE_PIN, LED_OFF);
     break;
   case GREEN:
-    analogWrite(GREEN_PIN, 0);
-    analogWrite(BLUE_PIN, 255);
-    analogWrite(RED_PIN, 255);
+    analogWrite(GREEN_PIN, LED_ON);
+    analogWrite(BLUE_PIN, LED_OFF);
+    analogWrite(RED_PIN, LED_OFF);
     break;
   case BLUE:
-    analogWrite(BLUE_PIN, 0);
-    analogWrite(RED_PIN, 255);
-    analogWrite(GREEN_PIN, 255);
+    analogWrite(BLUE_PIN, LED_ON);
+    analogWrite(RED_PIN, LED_OFF);
+    analogWrite(GREEN_PIN, LED_OFF);
     break;
   case UNKNOWN_COLOR:
-    analogWrite(GREEN_PIN, 0);
-    analogWrite(BLUE_PIN, 0);
-    analogWrite(RED_PIN, 0);
-    print_current_path();
-    print_next_path();
+    analogWrite(GREEN_PIN, LED_ON);
+    analogWrite(BLUE_PIN, LED_ON);
+    analogWrite(RED_PIN, LED_ON);
     break;
   }
 }
 
 void done_exec() {
-  if(parked == false){
-    Serial.println("You may park the vehicle");
-    
+  if(parked == false){    
     short_beep(3, true);
     delay(1200);
-    analogWrite(GREEN_PIN, 255);
-    analogWrite(BLUE_PIN, 255);
-    analogWrite(RED_PIN, 255); 
+    analogWrite(GREEN_PIN, LED_OFF);
+    analogWrite(BLUE_PIN, LED_OFF);
+    analogWrite(RED_PIN, LED_OFF); 
     parked = true; 
   }
   
