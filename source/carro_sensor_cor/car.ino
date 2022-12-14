@@ -1,3 +1,14 @@
+/*
+* Projeto Final da disciplina de Microcontroladores e Aplicações (2022.1)
+*
+* Alunos:
+* - José Ferreira Leite Neto (19111153)
+* - Lilian Giselly Pereira Santos (19111115)
+* -Lucas Lemos Cerqueira de Freitas (19111116)
+* - Pedro Henrique de Brito Nascimento (19111287)
+*
+*/
+
 #include "Adafruit_TCS34725.h"
 
 /* Definições Úteis */
