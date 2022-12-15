@@ -16,7 +16,7 @@ O EstaciOne é um projeto de estacionamento inteligente que reconhece a chegada 
 ## Objetivos
 Dentre os objetivos do projeto, podemos destacar:
 
-- Construção de uma maquete com 8 vagas (quatro de cada lado),
+- Construção de uma maquete com 7 vagas (quatro de cada lado),
 equipadas com sensores ultrassônicos para identificar se existe ou
 não veículo estacionado (algumas das vagas não terão o sensor por
 limitações de viabilidade);
@@ -66,10 +66,7 @@ necessário percorrer manualmente);
 distancie muito da rota, é necessário percorrer do início novamente);
 
 - O sistema não terá comunicação com o veículo em outro momento
-que não na transmissão serial na cancela (caso outro veículo chegue,
-a vaga destinada ao primeiro será considerada ocupada, a menos que
-o primeiro veículo não a ocupe em um intervalo de dois minutos,
-quando será liberada novamente);
+que não na transmissão serial na cancela;
 
 - Nem todas as vagas terão sensores ultrassônicos de ocupação por
 limitações de viabilidade (na maquete, alguns veículos ficarão “fixos”
